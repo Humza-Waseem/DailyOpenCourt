@@ -13,6 +13,7 @@ import StaffManagement from './pages/StaffManagement';  // ⭐ NEW IMPORT
 import UploadExcel from './pages/UploadExcel';
 import Analytics from './pages/Analytics';
 import './App.css';
+import VideoFeedback from './pages/VideoFeedback';
 
 function App() {
   return (
@@ -69,7 +70,13 @@ function App() {
               </Layout>
             </PrivateRoute>
           } />
-          
+          <Route path="/video-feedback" element={
+  <PrivateRoute>
+    <Layout>
+      <VideoFeedback />
+    </Layout>
+  </PrivateRoute>
+} />
           {/* Upload Excel */}
           <Route path="/upload" element={
             <PrivateRoute>

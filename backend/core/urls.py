@@ -4,6 +4,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'applications', views.OpenCourtApplicationViewSet)
+router.register(r'video-feedback', views.VideoFeedbackViewSet)  # ⭐ NEW
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -15,8 +16,11 @@ urlpatterns = [
     path('police-stations/', views.police_stations, name='police_stations'),
     path('categories/', views.categories, name='categories'),
     
-    # ⭐ NEW: Staff Management Endpoints
+    # Staff Management Endpoints
     path('staff/', views.staff_management, name='staff_management'),
     path('staff/<int:user_id>/', views.staff_detail, name='staff_detail'),
     path('divisions/', views.divisions_list, name='divisions_list'),
+    
+    # ⭐ NEW: Video Feedback
+    path('video-feedback-stats/', views.video_feedback_stats, name='video_feedback_stats'),
 ]

@@ -278,6 +278,74 @@ export const getDivisions = async () => {
   return response.data;
 };
 
+// ==========================================
+// VIDEO FEEDBACK APIs
+// ==========================================
+// ==========================================
+// VIDEO FEEDBACK APIs
+// ==========================================
 
+export const getAllVideoFeedback = async (params = {}) => {
+  try {
+    console.log('🎥 Fetching video feedback...');
+    const response = await api.get('/video-feedback/', { params });
+    
+    // Handle both array and object responses
+    const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+    
+    console.log(`✅ Fetched ${data.length} videos`);
+    return data;
+  } catch (error) {
+    console.error('❌ Error fetching video feedback:', error);
+    console.error('Response:', error.response?.data);
+    console.error('Status:', error.response?.status);
+    
+    // If unauthorized, might be a permission issue
+    if (error.response?.status === 401) {
+      console.error('🔒 Unauthorized - Check if user is logged in and has valid token');
+    }
+    if (error.response?.status === 403) {
+      console.error('🚫 Forbidden - User might not be admin');
+    }
+    
+    throw error;
+  }
+};
+
+export const getVideoFeedbackById = async (id) => {
+  try {
+    const response = await api.get(`/video-feedback/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error fetching video ${id}:`, error);
+    throw error;
+  }
+};
+
+export const submitVideoFeedback = async (id, feedback, remarks = '') => {
+  try {
+    console.log(`📝 Submitting feedback for video ${id}: ${feedback}`);
+    const response = await api.post(`/video-feedback/${id}/submit_feedback/`, {
+      feedback,
+      remarks
+    });
+    console.log('✅ Feedback submitted successfully');
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error submitting feedback for video ${id}:`, error);
+    throw error;
+  }
+};
+
+export const getVideoFeedbackStats = async () => {
+  try {
+    const response = await api.get('/video-feedback-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error fetching video feedback stats:', error);
+    // Return default stats if error
+    return { total: 0, pending: 0, liked: 0, disliked: 0 };
+  }
+};
 
 export default api;

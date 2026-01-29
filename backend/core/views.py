@@ -7,6 +7,9 @@ from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Count, Q
 from django.utils.dateparse import parse_date
 import openpyxl
+from .models import VideoFeedback
+from .serializers import VideoFeedbackSerializer
+from django.utils import timezone
 # Add this to the existing imports at the top
 from django.contrib.auth.hashers import make_password
 from rest_framework.exceptions import ValidationError
@@ -519,3 +522,76 @@ def divisions_list(request):
     """Get list of all divisions (unique)"""
     divisions = OpenCourtApplication.objects.values_list('division', flat=True).distinct().exclude(division='')
     return Response(sorted(list(set(divisions))))
+
+
+
+
+
+
+class VideoFeedbackViewSet(viewsets.ModelViewSet):
+    """ViewSet for Video Feedback - Admin only"""
+    queryset = VideoFeedback.objects.all()
+    serializer_class = VideoFeedbackSerializer
+    permission_classes = [IsAuthenticated]  # Keep this
+    
+    def get_queryset(self):
+        """Only admins can access video feedback"""
+        user = self.request.user
+        
+        # ✅ Add debugging
+        print(f"🔍 User: {user.username}, Role: {user.role}, Is Admin: {user.role == 'ADMIN'}")
+        
+        if user.role != 'ADMIN':
+            print("❌ Access denied - User is not admin")
+            return VideoFeedback.objects.none()
+        
+        videos = VideoFeedback.objects.all()
+        print(f"✅ Returning {videos.count()} videos for admin")
+        return videos
+    
+    @action(detail=True, methods=['post'])
+    def submit_feedback(self, request, pk=None):
+        """Submit like/dislike feedback on video"""
+        # ✅ Check admin permission
+        if request.user.role != 'ADMIN':
+            return Response(
+                {'error': 'Admin access required'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        video = self.get_object()
+        feedback_type = request.data.get('feedback')  # 'LIKE' or 'DISLIKE'
+        remarks = request.data.get('remarks', '')
+        
+        if feedback_type not in ['LIKE', 'DISLIKE']:
+            return Response(
+                {'error': 'Invalid feedback. Must be LIKE or DISLIKE'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        video.admin_feedback = feedback_type
+        video.admin_remarks = remarks
+        video.reviewed_by = request.user
+        video.reviewed_at = timezone.now()
+        video.save()
+        
+        serializer = self.get_serializer(video)
+        return Response(serializer.data)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def video_feedback_stats(request):
+    """Get video feedback statistics"""
+    if request.user.role != 'ADMIN':
+        return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+    
+    total = VideoFeedback.objects.count()
+    pending = VideoFeedback.objects.filter(admin_feedback='PENDING').count()
+    liked = VideoFeedback.objects.filter(admin_feedback='LIKE').count()
+    disliked = VideoFeedback.objects.filter(admin_feedback='DISLIKE').count()
+    
+    return Response({
+        'total': total,
+        'pending': pending,
+        'liked': liked,
+        'disliked': disliked
+    })

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import OpenCourtApplication, VideoFeedback
 from . models import OpenCourtApplication
 
 User = get_user_model()
@@ -40,3 +41,17 @@ class PoliceStationStatsSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     pending = serializers.IntegerField()
     heard = serializers.IntegerField()
+
+class VideoFeedbackSerializer(serializers.ModelSerializer):
+    file_size_mb = serializers.ReadOnlyField()
+    reviewed_by_name = serializers.CharField(source='reviewed_by.username', read_only=True)
+    
+    class Meta:
+        model = VideoFeedback
+        fields = [
+            'id', 'user_name', 'video_file', 'title', 'description',
+            'submitted_date', 'admin_feedback', 'admin_remarks',
+            'reviewed_by', 'reviewed_by_name', 'reviewed_at',
+            'duration', 'file_size', 'file_size_mb', 'thumbnail'
+        ]
+        read_only_fields = ['submitted_date', 'reviewed_by', 'reviewed_at']
