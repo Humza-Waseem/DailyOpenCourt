@@ -22,6 +22,22 @@ import {
   updateApplicationFeedback 
 } from '../services/api';
 import './DataTablePage.css';
+const getUniqueValues = (array) => {
+  if (!Array.isArray(array)) return [];
+  
+  const seen = new Map();
+  
+  array.forEach(item => {
+    if (item && typeof item === 'string') {
+      const normalized = item.trim().toLowerCase();
+      if (normalized && !seen.has(normalized)) {
+        seen.set(normalized, item.trim());
+      }
+    }
+  });
+  
+  return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+};
 
 const DataTablePage = () => {
   const { user } = useAuth();
@@ -61,32 +77,41 @@ const DataTablePage = () => {
   }, []);
 
   const fetchAllData = async () => {
-    setLoading(true);
-    try {
-      const [apps, ps, cat] = await Promise.all([
-        getApplications({}),
-        getPoliceStations(),
-        getCategories()
-      ]);
-      
-      const applications = apps.results || apps;
-      setAllData(applications);
-      setPoliceStations(ps);
-      setCategories(cat);
-      
-      // Extract unique values
-      const uniqueDivisions = [... new Set(applications.map(a => a.division).filter(Boolean))];
-      const uniqueSHOs = [...new Set(applications. map(a => a.marked_to).filter(Boolean))];
-      
-      setDivisions(uniqueDivisions. sort());
-      setShos(uniqueSHOs.sort());
-      
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const [apps, ps, cat] = await Promise.all([
+      getApplications({}),
+      getPoliceStations(),
+      getCategories()
+    ]);
+    
+    const applications = apps.results || apps;
+    setAllData(applications);
+    
+    // ✅ FIX: Deduplicate police stations
+    const uniquePS = getUniqueValues(ps);
+    setPoliceStations(uniquePS);
+    
+    // ✅ FIX: Deduplicate categories
+    const uniqueCat = getUniqueValues(cat);
+    setCategories(uniqueCat);
+    
+    // ✅ FIX: Extract unique divisions
+    const divisionValues = applications.map(a => a.division).filter(Boolean);
+    const uniqueDivisions = getUniqueValues(divisionValues);
+    setDivisions(uniqueDivisions);
+    
+    // ✅ FIX: Extract unique SHOs
+    const shoValues = applications.map(a => a.marked_to).filter(Boolean);
+    const uniqueSHOs = getUniqueValues(shoValues);
+    setShos(uniqueSHOs);
+    
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRefresh = async () => {
     setRefreshing(true);

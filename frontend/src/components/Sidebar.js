@@ -28,12 +28,12 @@ const Sidebar = () => {
       label: 'Applications', 
       roles: ['ADMIN', 'STAFF'] 
     },
-    { 
-      path: '/data-table', 
-      icon: Table2, 
-      label: 'Data Table', 
-      roles: ['ADMIN', 'STAFF'] 
-    },
+    // { 
+    //   path: '/data-table', 
+    //   icon: Table2, 
+    //   label: 'Data Table', 
+    //   roles: ['ADMIN', 'STAFF'] 
+    // },
     { 
       path: '/staff-management', 
       icon: Users, 

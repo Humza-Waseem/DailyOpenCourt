@@ -57,6 +57,24 @@ const DataTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
+  // ✅ HELPER FUNCTION: Remove duplicates (case-insensitive)
+  const getUniqueValues = (array) => {
+    if (!Array.isArray(array)) return [];
+    
+    const seen = new Map();
+    
+    array.forEach(item => {
+      if (item && typeof item === 'string') {
+        const normalized = item.trim().toLowerCase();
+        if (normalized && !seen.has(normalized)) {
+          seen.set(normalized, item.trim());
+        }
+      }
+    });
+    
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  };
+
   // Fetch data
   useEffect(() => {
     fetchData();
@@ -78,15 +96,25 @@ const DataTable = () => {
       
       const apps = appsData.results || appsData;
       setApplications(apps);
-      setPoliceStations(psData);
-      setCategories(catData);
       
-      // Extract unique divisions and SHOs
-      const uniqueDivisions = [...new Set(apps.map(app => app. division).filter(Boolean))];
-      const uniqueSHOs = [...new Set(apps. map(app => app.marked_to).filter(Boolean))];
+      // ✅ FIX: Deduplicate police stations
+      const uniquePS = getUniqueValues(psData);
+      setPoliceStations(uniquePS);
       
+      // ✅ FIX: Deduplicate categories
+      const uniqueCat = getUniqueValues(catData);
+      setCategories(uniqueCat);
+      
+      // ✅ FIX: Extract unique divisions from applications
+      const divisionValues = apps.map(app => app.division).filter(Boolean);
+      const uniqueDivisions = getUniqueValues(divisionValues);
       setDivisions(uniqueDivisions);
+      
+      // ✅ FIX: Extract unique SHOs from applications
+      const shoValues = apps.map(app => app.marked_to).filter(Boolean);
+      const uniqueSHOs = getUniqueValues(shoValues);
       setShos(uniqueSHOs);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -95,50 +123,53 @@ const DataTable = () => {
   };
 
   const applyFiltersAndSort = () => {
-    let filtered = [... applications];
+    let filtered = [...applications];
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered. filter(app =>
-        app.name?. toLowerCase().includes(searchTerm. toLowerCase()) ||
+      filtered = filtered.filter(app =>
+        app.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.dairy_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.contact?. includes(searchTerm) ||
+        app.contact?.includes(searchTerm) ||
         app.category?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Police Station filter
+    // ✅ FIX: Case-insensitive filter comparison
     if (selectedPS) {
-      filtered = filtered.filter(app => app.police_station === selectedPS);
+      filtered = filtered.filter(app => 
+        app.police_station?.trim().toLowerCase() === selectedPS.trim().toLowerCase()
+      );
     }
 
-    // Division filter
     if (selectedDivision) {
-      filtered = filtered.filter(app => app.division === selectedDivision);
+      filtered = filtered.filter(app => 
+        app.division?.trim().toLowerCase() === selectedDivision.trim().toLowerCase()
+      );
     }
 
-    // Category filter
     if (selectedCategory) {
-      filtered = filtered.filter(app => app.category === selectedCategory);
+      filtered = filtered.filter(app => 
+        app.category?.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+      );
     }
 
-    // Status filter
     if (selectedStatus) {
-      filtered = filtered. filter(app => app.status === selectedStatus);
+      filtered = filtered.filter(app => app.status === selectedStatus);
     }
 
-    // Feedback filter
     if (selectedFeedback) {
       filtered = filtered.filter(app => app.feedback === selectedFeedback);
     }
 
-    // SHO filter
     if (selectedSHO) {
-      filtered = filtered.filter(app => app.marked_to === selectedSHO);
+      filtered = filtered.filter(app => 
+        app.marked_to?.trim().toLowerCase() === selectedSHO.trim().toLowerCase()
+      );
     }
 
     // Sorting
-    if (sortConfig. key) {
+    if (sortConfig.key) {
       filtered.sort((a, b) => {
         const aVal = a[sortConfig.key] || '';
         const bVal = b[sortConfig.key] || '';
@@ -155,7 +186,7 @@ const DataTable = () => {
 
   const handleSort = (key) => {
     let direction = 'asc';
-    if (sortConfig.key === key && sortConfig. direction === 'asc') {
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
@@ -211,7 +242,7 @@ const DataTable = () => {
       app.date || 'N/A'
     ]);
 
-    const csv = [headers, ...csvData]. map(row => row.join(',')).join('\n');
+    const csv = [headers, ...csvData].map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -223,7 +254,7 @@ const DataTable = () => {
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData. slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   const SortIcon = ({ columnKey }) => {
@@ -323,7 +354,7 @@ const DataTable = () => {
               <label>Police Station</label>
               <select value={selectedPS} onChange={(e) => setSelectedPS(e.target.value)}>
                 <option value="">All Stations</option>
-                {policeStations. map((ps, idx) => (
+                {policeStations.map((ps, idx) => (
                   <option key={idx} value={ps}>{ps}</option>
                 ))}
               </select>
@@ -331,7 +362,7 @@ const DataTable = () => {
 
             <div className="filter-group">
               <label>Division</label>
-              <select value={selectedDivision} onChange={(e) => setSelectedDivision(e.target. value)}>
+              <select value={selectedDivision} onChange={(e) => setSelectedDivision(e.target.value)}>
                 <option value="">All Divisions</option>
                 {divisions.map((div, idx) => (
                   <option key={idx} value={div}>{div}</option>
@@ -343,7 +374,7 @@ const DataTable = () => {
               <label>Category</label>
               <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                 <option value="">All Categories</option>
-                {categories. map((cat, idx) => (
+                {categories.map((cat, idx) => (
                   <option key={idx} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -389,7 +420,7 @@ const DataTable = () => {
           <thead>
             <tr>
               <th onClick={() => handleSort('sr_no')} className="sortable">
-                Sr.  No <SortIcon columnKey="sr_no" />
+                Sr. No <SortIcon columnKey="sr_no" />
               </th>
               <th onClick={() => handleSort('dairy_no')} className="sortable">
                 Dairy No <SortIcon columnKey="dairy_no" />
@@ -431,7 +462,7 @@ const DataTable = () => {
                 </td>
               </tr>
             ) : (
-              currentItems. map((app) => (
+              currentItems.map((app) => (
                 <tr key={app.id}>
                   <td>{app.sr_no}</td>
                   <td className="dairy-no">{app.dairy_no}</td>
@@ -444,8 +475,8 @@ const DataTable = () => {
                     )}
                   </td>
                   <td>{app.police_station}</td>
-                  <td>{app. division}</td>
-                  <td className="category-cell">{app. category}</td>
+                  <td>{app.division}</td>
+                  <td className="category-cell">{app.category}</td>
                   <td>{app.marked_to || 'N/A'}</td>
                   <td>
                     <span className={`badge ${getStatusBadge(app.status)}`}>
@@ -458,7 +489,7 @@ const DataTable = () => {
                     </span>
                   </td>
                   <td>
-                    {app.date ?  (
+                    {app.date ? (
                       <span className="date-cell">
                         <Calendar size={14} />
                         {new Date(app.date).toLocaleDateString('en-PK')}

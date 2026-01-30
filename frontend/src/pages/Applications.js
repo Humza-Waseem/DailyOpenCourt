@@ -35,6 +35,24 @@ import {
 import * as XLSX from 'xlsx';
 import './Applications.css';
 
+// ✅ HELPER FUNCTION: Remove duplicates (case-insensitive)
+const getUniqueValues = (array) => {
+  if (!Array.isArray(array)) return [];
+  
+  const seen = new Map();
+  
+  array.forEach(item => {
+    if (item && typeof item === 'string') {
+      const normalized = item.trim().toLowerCase();
+      if (normalized && !seen.has(normalized)) {
+        seen.set(normalized, item.trim());
+      }
+    }
+  });
+  
+  return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+};
+
 const Applications = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -92,8 +110,15 @@ const Applications = () => {
         getPoliceStations(),
         getCategories()
       ]);
-      setPoliceStations(psData);
-      setCategories(catData);
+      
+      // ✅ FIX: Deduplicate police stations
+      const uniquePS = getUniqueValues(psData);
+      setPoliceStations(uniquePS);
+      
+      // ✅ FIX: Deduplicate categories
+      const uniqueCat = getUniqueValues(catData);
+      setCategories(uniqueCat);
+      
     } catch (error) {
       console.error('Error fetching metadata:', error);
     }
@@ -253,14 +278,18 @@ const Applications = () => {
       filtered = filtered.filter(app => app.status === statusFilter);
     }
 
-    // Apply police station filter
+    // ✅ FIX: Case-insensitive police station filter
     if (selectedPS) {
-      filtered = filtered.filter(app => app.police_station === selectedPS);
+      filtered = filtered.filter(app => 
+        app.police_station?.trim().toLowerCase() === selectedPS.trim().toLowerCase()
+      );
     }
 
-    // Apply category filter
+    // ✅ FIX: Case-insensitive category filter
     if (selectedCategory) {
-      filtered = filtered.filter(app => app.category === selectedCategory);
+      filtered = filtered.filter(app => 
+        app.category?.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+      );
     }
 
     // Apply feedback filter
