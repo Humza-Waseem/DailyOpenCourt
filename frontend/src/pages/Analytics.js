@@ -9,11 +9,6 @@ import {
   Pie,
   AreaChart,
   Area,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -34,7 +29,10 @@ import {
   RefreshCw,
   Download,
   Calendar,
-  X
+  X,
+  Users,
+  Award,
+  AlertTriangle
 } from 'lucide-react';
 import './Analytics.css';
 
@@ -101,7 +99,13 @@ const Analytics = () => {
         topCategories: [],
         divisionPerformance: [],
         resolutionTime: [],
-        statusByPS: []
+        statusByPS: [],
+        contactRate: [],
+        topSHOs: [],
+        categoryFeedbackCorrelation: [],
+        dailySubmissions: [],
+        pendingAge: [],
+        monthlyFeedbackTrend: []
       };
     }
 
@@ -177,20 +181,19 @@ const Analytics = () => {
       .slice(0, 10);
 
     // 5. TOP 10 CATEGORIES
-// 5. TOP 10 CATEGORIES - ⚡ FIXED: Normalize case-insensitive duplicates
-const catCount = {};
-filteredApplications.forEach(app => {
-  if (app.category) {
-    // Normalize: trim whitespace and convert to Title Case
-    const normalized = app.category.trim();
-    const titleCase = normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
-    catCount[titleCase] = (catCount[titleCase] || 0) + 1;
-  }
-});
-const topCategories = Object.entries(catCount)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 10)
-  .map(([name, count]) => ({ name, count }));
+    const catCount = {};
+    filteredApplications.forEach(app => {
+      if (app.category) {
+        const normalized = app.category.trim();
+        const titleCase = normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+        catCount[titleCase] = (catCount[titleCase] || 0) + 1;
+      }
+    });
+    const topCategories = Object.entries(catCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
+
     // 6. DIVISION PERFORMANCE
     const divisionData = {};
     filteredApplications.forEach(app => {
@@ -225,7 +228,7 @@ const topCategories = Object.entries(catCount)
       { status: 'Closed', days: calculateAvgDays('CLOSED') }
     ];
 
-    // 8. STATUS BY POLICE STATION (STACKED)
+    // 8. STATUS BY POLICE STATION
     const psStatusData = {};
     filteredApplications.forEach(app => {
       if (app.police_station) {
@@ -245,6 +248,132 @@ const topCategories = Object.entries(catCount)
       .sort((a, b) => (b.PENDING + b.HEARD + b.REFERRED + b.CLOSED) - (a.PENDING + a.HEARD + a.REFERRED + a.CLOSED))
       .slice(0, 8);
 
+    // ============= NEW ANALYTICS =============
+
+    // 9. CONTACT RATE ANALYSIS
+    const withContact = filteredApplications.filter(a => a.contact && a.contact.trim() !== '').length;
+    const withoutContact = filteredApplications.length - withContact;
+    const contactRate = [
+      { name: 'With Contact', value: withContact, percentage: ((withContact / filteredApplications.length) * 100).toFixed(1) },
+      { name: 'Without Contact', value: withoutContact, percentage: ((withoutContact / filteredApplications.length) * 100).toFixed(1) }
+    ];
+
+    // 10. TOP 10 SHOs (MARKED TO)
+    const shoCount = {};
+    filteredApplications.forEach(app => {
+      if (app.marked_to && app.marked_to.trim() !== '') {
+        const sho = app.marked_to.trim();
+        if (!shoCount[sho]) {
+          shoCount[sho] = { total: 0, resolved: 0, pending: 0 };
+        }
+        shoCount[sho].total++;
+        if (app.status === 'CLOSED' || app.status === 'HEARD') {
+          shoCount[sho].resolved++;
+        } else {
+          shoCount[sho].pending++;
+        }
+      }
+    });
+    const topSHOs = Object.entries(shoCount)
+      .map(([name, data]) => ({
+        name: name.length > 20 ? name.substring(0, 20) + '...' : name,
+        total: data.total,
+        resolved: data.resolved,
+        pending: data.pending,
+        efficiency: data.total > 0 ? ((data.resolved / data.total) * 100).toFixed(0) : 0
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    // 11. CATEGORY VS FEEDBACK CORRELATION
+    const catFeedbackData = {};
+    filteredApplications.forEach(app => {
+      if (app.category) {
+        const normalized = app.category.trim();
+        const titleCase = normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+        if (!catFeedbackData[titleCase]) {
+          catFeedbackData[titleCase] = { positive: 0, negative: 0, pending: 0 };
+        }
+        if (app.feedback === 'POSITIVE') catFeedbackData[titleCase].positive++;
+        if (app.feedback === 'NEGATIVE') catFeedbackData[titleCase].negative++;
+        if (app.feedback === 'PENDING') catFeedbackData[titleCase].pending++;
+      }
+    });
+    const categoryFeedbackCorrelation = Object.entries(catFeedbackData)
+      .map(([name, data]) => ({
+        name,
+        positive: data.positive,
+        negative: data.negative,
+        total: data.positive + data.negative + data.pending,
+        satisfaction: data.positive + data.negative > 0 ? 
+          ((data.positive / (data.positive + data.negative)) * 100).toFixed(0) : 0
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
+
+    // 12. DAILY SUBMISSIONS (Day of Week Analysis)
+    const dayOfWeekData = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    filteredApplications.forEach(app => {
+      if (app.date) {
+        const date = new Date(app.date);
+        if (!isNaN(date.getTime())) {
+          const dayName = dayNames[date.getDay()];
+          dayOfWeekData[dayName]++;
+        }
+      }
+    });
+    const dailySubmissions = dayNames.map(day => ({
+      day,
+      count: dayOfWeekData[day]
+    }));
+
+    // 13. PENDING APPLICATIONS AGE DISTRIBUTION
+    const today = new Date();
+    const pendingApps = filteredApplications.filter(a => a.status === 'PENDING' && a.date);
+    const ageGroups = { '0-7 days': 0, '8-15 days': 0, '16-30 days': 0, '31-60 days': 0, '60+ days': 0 };
+    
+    pendingApps.forEach(app => {
+      const appDate = new Date(app.date);
+      const daysDiff = Math.floor((today - appDate) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff <= 7) ageGroups['0-7 days']++;
+      else if (daysDiff <= 15) ageGroups['8-15 days']++;
+      else if (daysDiff <= 30) ageGroups['16-30 days']++;
+      else if (daysDiff <= 60) ageGroups['31-60 days']++;
+      else ageGroups['60+ days']++;
+    });
+    
+    const pendingAge = Object.entries(ageGroups).map(([range, count]) => ({ range, count }));
+
+    // 14. MONTHLY FEEDBACK TREND
+    const monthlyFeedbackData = {};
+    filteredApplications.forEach(app => {
+      if (app.date && app.feedback !== 'PENDING') {
+        const date = new Date(app.date);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyFeedbackData[monthKey]) {
+          monthlyFeedbackData[monthKey] = { positive: 0, negative: 0, sortKey };
+        }
+        if (app.feedback === 'POSITIVE') monthlyFeedbackData[monthKey].positive++;
+        if (app.feedback === 'NEGATIVE') monthlyFeedbackData[monthKey].negative++;
+      }
+    });
+    
+    const monthlyFeedbackTrend = Object.entries(monthlyFeedbackData)
+      .map(([month, data]) => ({
+        month,
+        positive: data.positive,
+        negative: data.negative,
+        satisfaction: data.positive + data.negative > 0 ?
+          ((data.positive / (data.positive + data.negative)) * 100).toFixed(0) : 0,
+        sortKey: data.sortKey
+      }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .slice(-6);
+
     return {
       statusDist,
       feedbackDist,
@@ -253,7 +382,13 @@ const topCategories = Object.entries(catCount)
       topCategories,
       divisionPerformance,
       resolutionTime,
-      statusByPS
+      statusByPS,
+      contactRate,
+      topSHOs,
+      categoryFeedbackCorrelation,
+      dailySubmissions,
+      pendingAge,
+      monthlyFeedbackTrend
     };
   }, [filteredApplications]);
 
@@ -269,7 +404,8 @@ const topCategories = Object.entries(catCount)
       NEGATIVE: '#EF4444',
       PENDING: '#6B7280'
     },
-    bars: ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#6366F1', '#F97316']
+    bars: ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#6366F1', '#F97316'],
+    contact: ['#10B981', '#EF4444']
   };
 
   const exportData = () => {
@@ -392,8 +528,7 @@ const topCategories = Object.entries(catCount)
       {/* Charts Grid */}
       <div className="charts-grid-modern">
         
-        {/* 1. Status Distribution - Pie */}
-              {/* 1. Status Distribution - Vertical Bar with Gradient */}
+        {/* 1. Status Distribution - Bar */}
         <div className="chart-modern">
           <div className="chart-title">
             <h3>
@@ -405,10 +540,10 @@ const topCategories = Object.entries(catCount)
           <ResponsiveContainer width="100%" height={280}>
             <BarChart 
               data={[
-                { name: 'Pending', value: metrics.statusDist.PENDING, color: COLORS.status.PENDING },
-                { name: 'Heard', value: metrics.statusDist.HEARD, color: COLORS.status.HEARD },
-                { name: 'Referred', value: metrics.statusDist.REFERRED, color: COLORS.status.REFERRED },
-                { name: 'Closed', value: metrics.statusDist.CLOSED, color: COLORS.status.CLOSED }
+                { name: 'Pending', value: metrics.statusDist.PENDING },
+                { name: 'Heard', value: metrics.statusDist.HEARD },
+                { name: 'Referred', value: metrics.statusDist.REFERRED },
+                { name: 'Closed', value: metrics.statusDist.CLOSED }
               ].filter(item => item.value > 0)}
             >
               <defs>
@@ -438,7 +573,6 @@ const topCategories = Object.entries(catCount)
               <YAxis 
                 stroke="#6B7280" 
                 style={{ fontSize: '12px' }}
-                label={{ value: 'Applications', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6B7280' } }}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -448,31 +582,21 @@ const topCategories = Object.entries(catCount)
                   fontSize: '13px',
                   fontWeight: 600
                 }}
-                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
               />
               <Bar 
                 dataKey="value" 
                 radius={[8, 8, 0, 0]}
-                label={{ 
-                  position: 'top', 
-                  fill: '#1E293B',
-                  fontWeight: 700,
-                  fontSize: 14
-                }}
+                label={{ position: 'top', fill: '#1E293B', fontWeight: 700, fontSize: 14 }}
               >
-                {[
-                  { color: 'url(#gradientPending)' },
-                  { color: 'url(#gradientHeard)' },
-                  { color: 'url(#gradientReferred)' },
-                  { color: 'url(#gradientClosed)' }
-                ].map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {['url(#gradientPending)', 'url(#gradientHeard)', 'url(#gradientReferred)', 'url(#gradientClosed)'].map((color, index) => (
+                  <Cell key={`cell-${index}`} fill={color} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-        {/* 2. Feedback Distribution - Donut */}
+
+        {/* 2. Feedback Distribution */}
         <div className="chart-modern">
           <div className="chart-title">
             <h3>Feedback Analysis</h3>
@@ -504,13 +628,10 @@ const topCategories = Object.entries(catCount)
           </ResponsiveContainer>
         </div>
 
-        {/* 3. Monthly Trend - Area Chart */}
+        {/* 3. Monthly Trend */}
         <div className="chart-modern wide">
           <div className="chart-title">
-            <h3>
-              <TrendingUp size={18} />
-              Monthly Application Trend
-            </h3>
+            <h3><TrendingUp size={18} />Monthly Application Trend</h3>
             <span className="badge-info">12 Months</span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
@@ -524,54 +645,24 @@ const topCategories = Object.entries(catCount)
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
               <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: '#FFF', 
-                  border: '2px solid #3B82F6',
-                  borderRadius: '8px',
-                  fontSize: '13px'
-                }} 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="applications" 
-                stroke="#3B82F6" 
-                strokeWidth={2}
-                fill="url(#colorApps)" 
-              />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #3B82F6', borderRadius: '8px', fontSize: '13px' }} />
+              <Area type="monotone" dataKey="applications" stroke="#3B82F6" strokeWidth={2} fill="url(#colorApps)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* 4. Top Police Stations - Stacked Bar */}
+        {/* 4. Top Police Stations */}
         <div className="chart-modern wide">
           <div className="chart-title">
-            <h3>
-              <MapPin size={18} />
-              Top 10 Police Stations (Pending vs Resolved)
-            </h3>
+            <h3><MapPin size={18} />Top 10 Police Stations</h3>
             <span className="badge-success">Performance</span>
           </div>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={metrics.topPS}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="name" 
-                stroke="#6B7280" 
-                angle={-45} 
-                textAnchor="end" 
-                height={100}
-                style={{ fontSize: '11px' }}
-              />
+              <XAxis dataKey="name" stroke="#6B7280" angle={-45} textAnchor="end" height={100} style={{ fontSize: '11px' }} />
               <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: '#FFF', 
-                  border: '2px solid #10B981',
-                  borderRadius: '8px',
-                  fontSize: '13px'
-                }} 
-              />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #10B981', borderRadius: '8px', fontSize: '13px' }} />
               <Legend />
               <Bar dataKey="resolved" stackId="a" fill="#10B981" name="Resolved" radius={[4, 4, 0, 0]} />
               <Bar dataKey="pending" stackId="a" fill="#F59E0B" name="Pending" radius={[4, 4, 0, 0]} />
@@ -579,48 +670,31 @@ const topCategories = Object.entries(catCount)
           </ResponsiveContainer>
         </div>
 
-        {/* 5. Top Categories - Horizontal Bar */}
-        
-      {/* 5. Top Categories - Horizontal Bar - FIXED */}
-<div className="chart-modern wide">
-  <div className="chart-title">
-    <h3>
-      <BarChart3 size={18} />
-      Top 10 Categories by Volume
-    </h3>
-    <span className="badge-purple">Distribution</span>
-  </div>
-  <ResponsiveContainer width="100%" height={320}>
-    <BarChart data={metrics.topCategories} layout="vertical">
-      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-      <XAxis type="number" stroke="#6B7280" style={{ fontSize: '12px' }} />
-      <YAxis 
-        dataKey="name" 
-        type="category" 
-        width={150} 
-        stroke="#6B7280"
-        style={{ fontSize: '11px' }}
-      />
-      <Tooltip 
-        contentStyle={{ 
-          background: '#FFF', 
-          border: '2px solid #8B5CF6',
-          borderRadius: '8px',
-          fontSize: '13px'
-        }} 
-      />
-      <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-        {metrics.topCategories.map((entry, index) => (
-          <Cell key={`cell-${index}`} fill={COLORS.bars[index % 8]} />
-        ))}
-      </Bar>
-    </BarChart>
-  </ResponsiveContainer>
-</div>
-        {/* 6. Division Performance - Grouped Bar */}
+        {/* 5. Top Categories */}
         <div className="chart-modern wide">
           <div className="chart-title">
-            <h3>Division Performance (Pending vs Resolved)</h3>
+            <h3><BarChart3 size={18} />Top 10 Categories</h3>
+            <span className="badge-purple">Distribution</span>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={metrics.topCategories} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis type="number" stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <YAxis dataKey="name" type="category" width={150} stroke="#6B7280" style={{ fontSize: '11px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #8B5CF6', borderRadius: '8px', fontSize: '13px' }} />
+              <Bar dataKey="count" radius={[0, 8, 8, 0]}>
+                {metrics.topCategories.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS.bars[index % 8]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 6. Division Performance */}
+        <div className="chart-modern wide">
+          <div className="chart-title">
+            <h3>Division Performance</h3>
             <span className="badge-info">Comparative</span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
@@ -628,14 +702,7 @@ const topCategories = Object.entries(catCount)
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="name" stroke="#6B7280" style={{ fontSize: '12px' }} />
               <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: '#FFF', 
-                  border: '2px solid #06B6D4',
-                  borderRadius: '8px',
-                  fontSize: '13px'
-                }} 
-              />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #06B6D4', borderRadius: '8px', fontSize: '13px' }} />
               <Legend />
               <Bar dataKey="pending" fill="#F59E0B" name="Pending" radius={[4, 4, 0, 0]} />
               <Bar dataKey="resolved" fill="#10B981" name="Resolved" radius={[4, 4, 0, 0]} />
@@ -643,10 +710,10 @@ const topCategories = Object.entries(catCount)
           </ResponsiveContainer>
         </div>
 
-        {/* 7. Average Resolution Time - Bar Chart */}
+        {/* 7. Avg Resolution Time */}
         <div className="chart-modern">
           <div className="chart-title">
-            <h3>Avg Resolution Days by Status</h3>
+            <h3>Avg Resolution Days</h3>
             <span className="badge-warning">Timeline</span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
@@ -654,14 +721,7 @@ const topCategories = Object.entries(catCount)
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis dataKey="status" stroke="#6B7280" style={{ fontSize: '12px' }} />
               <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: '#FFF', 
-                  border: '2px solid #F59E0B',
-                  borderRadius: '8px',
-                  fontSize: '13px'
-                }} 
-              />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #F59E0B', borderRadius: '8px', fontSize: '13px' }} />
               <Bar dataKey="days" fill="#F59E0B" name="Days" radius={[8, 8, 0, 0]}>
                 {metrics.resolutionTime.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={Object.values(COLORS.status)[index]} />
@@ -671,38 +731,144 @@ const topCategories = Object.entries(catCount)
           </ResponsiveContainer>
         </div>
 
-        {/* 8. Status by Police Station - Stacked Bar */}
+        {/* 8. Status by PS */}
         <div className="chart-modern wide">
           <div className="chart-title">
             <h3>Status Breakdown by Police Station</h3>
-            <span className="badge-success">Detailed View</span>
+            <span className="badge-success">Detailed</span>
           </div>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={metrics.statusByPS}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="name" 
-                stroke="#6B7280" 
-                angle={-45} 
-                textAnchor="end" 
-                height={100}
-                style={{ fontSize: '11px' }}
-              />
+              <XAxis dataKey="name" stroke="#6B7280" angle={-45} textAnchor="end" height={100} style={{ fontSize: '11px' }} />
               <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  background: '#FFF', 
-                  border: '2px solid #6366F1',
-                  borderRadius: '8px',
-                  fontSize: '13px'
-                }} 
-              />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #6366F1', borderRadius: '8px', fontSize: '13px' }} />
               <Legend />
               <Bar dataKey="PENDING" stackId="a" fill={COLORS.status.PENDING} name="Pending" />
               <Bar dataKey="HEARD" stackId="a" fill={COLORS.status.HEARD} name="Heard" />
               <Bar dataKey="REFERRED" stackId="a" fill={COLORS.status.REFERRED} name="Referred" />
               <Bar dataKey="CLOSED" stackId="a" fill={COLORS.status.CLOSED} name="Closed" />
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* ========== NEW CHARTS ========== */}
+
+        {/* 9. Contact Rate Analysis */}
+        <div className="chart-modern">
+          <div className="chart-title">
+            <h3><Users size={18} />Contact Information Rate</h3>
+            <span className="badge-info">Data Quality</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={metrics.contactRate}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percentage }) => `${name}: ${percentage}%`}
+                outerRadius={90}
+                dataKey="value"
+              >
+                {COLORS.contact.map((color, index) => (
+                  <Cell key={`cell-${index}`} fill={color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 10. Top SHOs Performance */}
+        <div className="chart-modern wide">
+          <div className="chart-title">
+            <h3><Award size={18} />Top 10 SHOs by Workload</h3>
+            <span className="badge-success">Officers</span>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={metrics.topSHOs}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="name" stroke="#6B7280" angle={-45} textAnchor="end" height={100} style={{ fontSize: '10px' }} />
+              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #10B981', borderRadius: '8px', fontSize: '13px' }} />
+              <Legend />
+              <Bar dataKey="resolved" fill="#10B981" name="Resolved" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pending" fill="#F59E0B" name="Pending" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 11. Category vs Feedback Satisfaction */}
+        <div className="chart-modern wide">
+          <div className="chart-title">
+            <h3><ThumbsUp size={18} />Category Satisfaction Rate</h3>
+            <span className="badge-purple">Feedback Quality</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={metrics.categoryFeedbackCorrelation}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="name" stroke="#6B7280" style={{ fontSize: '11px' }} />
+              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #8B5CF6', borderRadius: '8px', fontSize: '13px' }} />
+              <Legend />
+              <Bar dataKey="positive" fill="#10B981" name="Positive" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="negative" fill="#EF4444" name="Negative" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 12. Daily Submissions (Day of Week) */}
+        <div className="chart-modern">
+          <div className="chart-title">
+            <h3><Calendar size={18} />Applications by Day of Week</h3>
+            <span className="badge-info">Patterns</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={metrics.dailySubmissions}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="day" stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #3B82F6', borderRadius: '8px', fontSize: '13px' }} />
+              <Bar dataKey="count" fill="#3B82F6" name="Applications" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 13. Pending Applications Age */}
+        <div className="chart-modern">
+          <div className="chart-title">
+            <h3><AlertTriangle size={18} />Pending Cases Age Distribution</h3>
+            <span className="badge-warning">Urgency</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={metrics.pendingAge}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="range" stroke="#6B7280" style={{ fontSize: '11px' }} />
+              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #F59E0B', borderRadius: '8px', fontSize: '13px' }} />
+              <Bar dataKey="count" fill="#F59E0B" name="Pending Cases" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 14. Monthly Feedback Trend */}
+        <div className="chart-modern wide">
+          <div className="chart-title">
+            <h3><TrendingUp size={18} />Monthly Feedback Trend</h3>
+            <span className="badge-success">Satisfaction Over Time</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={metrics.monthlyFeedbackTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+              <Tooltip contentStyle={{ background: '#FFF', border: '2px solid #10B981', borderRadius: '8px', fontSize: '13px' }} />
+              <Legend />
+              <Line type="monotone" dataKey="positive" stroke="#10B981" strokeWidth={3} name="Positive" dot={{ r: 5 }} />
+              <Line type="monotone" dataKey="negative" stroke="#EF4444" strokeWidth={3} name="Negative" dot={{ r: 5 }} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
 
