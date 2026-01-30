@@ -86,15 +86,7 @@ const Sidebar = () => {
         })}
       </nav>
       
-      {/* Optional: Add a visual indicator for admin-only sections */}
-      {user?.role === 'ADMIN' && (
-        <div className="sidebar-footer">
-          <div className="admin-badge">
-            <Users size={16} />
-            <span>Admin Panel</span>
-          </div>
-        </div>
-      )}
+    
     </aside>
   );
 };
