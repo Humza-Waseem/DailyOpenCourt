@@ -24,7 +24,13 @@ import {
   ChevronRight,
   X,
   Calendar,
-  Download
+  Download,
+  Maximize2,
+  Minimize2,
+  User,
+  MapPin,
+  Tag,
+  Clock
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import './Applications.css';
@@ -57,6 +63,11 @@ const Applications = () => {
   // Sorting State
   const [sortField, setSortField] = useState('sr_no');
   const [sortDirection, setSortDirection] = useState('asc');
+
+  // ⭐ NEW: Fullscreen & Modal States
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
 
   useEffect(() => {
     fetchApplications();
@@ -110,6 +121,23 @@ const Applications = () => {
 
   const handleCall = (contact) => {
     window.location.href = `tel:${contact}`;
+  };
+
+  // ⭐ NEW: Fullscreen Toggle
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  // ⭐ NEW: View Details in Modal
+  const handleViewDetails = (app) => {
+    setSelectedApplication(app);
+    setShowDetailModal(true);
+  };
+
+  // ⭐ NEW: Close Modal
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedApplication(null);
   };
 
   // Sorting Handler
@@ -376,7 +404,7 @@ const Applications = () => {
   const hasActiveFilters = search || statusFilter || selectedPS || selectedCategory || feedbackFilter || fromDate || toDate;
 
   return (
-    <div className="applications-table-page">
+    <div className={`applications-table-page ${isFullscreen ? 'fullscreen-mode' : ''}`}>
       {/* Header */}
       <div className="page-header-section">
         <div>
@@ -402,6 +430,15 @@ const Applications = () => {
           <button onClick={fetchApplications} className="refresh-btn">
             <RefreshCw size={18} />
             Refresh
+          </button>
+          {/* ⭐ NEW: Fullscreen Button */}
+          <button 
+            onClick={toggleFullscreen} 
+            className="fullscreen-btn"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            {isFullscreen ? 'Exit' : 'Fullscreen'}
           </button>
         </div>
       </div>
@@ -612,8 +649,9 @@ const Applications = () => {
                     </td>
                     <td className="cell-date">{formatDate(app.date)}</td>
                     <td className="cell-actions">
+                      {/* ⭐ CHANGED: Now opens modal instead of navigating */}
                       <button 
-                        onClick={() => navigate(`/applications/${app.id}`)}
+                        onClick={() => handleViewDetails(app)}
                         className="view-btn"
                         title="View Details"
                       >
@@ -681,6 +719,167 @@ const Applications = () => {
               <option value={100}>100</option>
               <option value={200}>200</option>
             </select>
+          </div>
+        </div>
+      )}
+
+      {/* ⭐ NEW: Detail Modal */}
+      {showDetailModal && selectedApplication && (
+        <div className="modal-overlay-detail" onClick={closeDetailModal}>
+          <div className="modal-content-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-detail">
+              <h2>Application Details</h2>
+              <button onClick={closeDetailModal} className="modal-close-btn">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body-detail">
+              {/* Basic Information */}
+              <div className="detail-section-modal">
+                <h3>Basic Information</h3>
+                <div className="status-badges-modal">
+                  <span className={getStatusBadgeClass(selectedApplication.status)}>
+                    {selectedApplication.status}
+                  </span>
+                  <span className={getFeedbackBadgeClass(selectedApplication.feedback)}>
+                    {selectedApplication.feedback}
+                  </span>
+                </div>
+                <div className="info-grid-modal">
+                  <div className="info-item-modal">
+                    <FileText size={18} className="info-icon-modal" />
+                    <div>
+                      <label>SR Number:</label>
+                      <span>{selectedApplication.sr_no}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <FileText size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Dairy Number:</label>
+                      <span>{selectedApplication.dairy_no}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <User size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Applicant Name:</label>
+                      <span>{selectedApplication.name}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <Phone size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Contact Number:</label>
+                      <button onClick={() => handleCall(selectedApplication.contact)} className="phone-btn">
+                        <Phone size={14} />
+                        {selectedApplication.contact}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <Calendar size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Date:</label>
+                      <span>{formatDate(selectedApplication.date)}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <Clock size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Timeline:</label>
+                      <span>{selectedApplication.timeline || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Details */}
+              <div className="detail-section-modal">
+                <h3>Location Details</h3>
+                <div className="info-grid-modal">
+                  <div className="info-item-modal">
+                    <MapPin size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Police Station:</label>
+                      <span>{selectedApplication.police_station}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <MapPin size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Division:</label>
+                      <span>{selectedApplication.division || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <FileText size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Dairy PS:</label>
+                      <span>{selectedApplication.dairy_ps || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Case Details */}
+              <div className="detail-section-modal">
+                <h3>Case Details</h3>
+                <div className="info-grid-modal">
+                  <div className="info-item-modal">
+                    <Tag size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Category:</label>
+                      <span>{selectedApplication.category}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <User size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Marked To:</label>
+                      <span>{selectedApplication.marked_to || 'Not Assigned'}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <User size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Marked By:</label>
+                      <span>{selectedApplication.marked_by || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <div className="info-item-modal">
+                    <Clock size={18} className="info-icon-modal" />
+                    <div>
+                      <label>Days:</label>
+                      <span>{selectedApplication.days || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+                {selectedApplication.remarks && (
+                  <div className="remarks-section-modal">
+                    <label>Remarks:</label>
+                    <p>{selectedApplication.remarks}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer-detail">
+              <button 
+                onClick={() => { 
+                  navigate(`/applications/${selectedApplication.id}`); 
+                  closeDetailModal(); 
+                }} 
+                className="export-excel-btn"
+              >
+                <Eye size={16} />
+                Full Details & Edit
+              </button>
+              <button onClick={closeDetailModal} className="refresh-btn">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
