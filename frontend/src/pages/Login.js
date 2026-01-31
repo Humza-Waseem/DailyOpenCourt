@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Lock, LogIn } from 'lucide-react';
+import './Login.css';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -86,7 +87,7 @@ const Login = () => {
           >
             {loading ? (
               <>
-                <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
+                <div className="" style={{ width: '20px', height: '20px' }}></div>
                 Logging in...
               </>
             ) : (

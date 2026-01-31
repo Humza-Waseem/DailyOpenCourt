@@ -11,7 +11,7 @@ const Header = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const getRoleDisplay = (role) => {
