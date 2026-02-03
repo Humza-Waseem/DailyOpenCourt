@@ -1,3 +1,5 @@
+// frontend/src/services/api.js
+
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -41,7 +43,6 @@ api.interceptors.response.use(
 
         const { access } = response.data;
         localStorage.setItem('accessToken', access);
-
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest);
       } catch (refreshError) {
@@ -76,24 +77,42 @@ export const getCurrentUser = async () => {
 };
 
 // ==========================================
-// APPLICATIONS APIs - Full CRUD
+// ⚡ OPTIMIZED APPLICATIONS APIs WITH PAGINATION
 // ==========================================
 
-// GET - Fetch all applications with optional filters
 export const getApplications = async (params = {}) => {
   try {
     console.time('⚡ Fetch Applications');
     
-    const response = await api.get('/applications/', { params });
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    
+    // Pagination
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    
+    // Filters
+    if (params.search) queryParams.append('search', params.search);
+    if (params.police_station) queryParams.append('police_station', params.police_station);
+    if (params.division) queryParams.append('division', params.division);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.feedback) queryParams.append('feedback', params.feedback);
+    if (params.from_date) queryParams.append('from_date', params.from_date);
+    if (params.to_date) queryParams.append('to_date', params.to_date);
+    if (params.marked_to) queryParams.append('marked_to', params.marked_to);
+    
+    // Ordering
+    if (params.ordering) queryParams.append('ordering', params.ordering);
+    
+    const response = await api.get(`/applications/?${queryParams.toString()}`);
     
     console.timeEnd('⚡ Fetch Applications');
+    console.log(`✅ Fetched page ${params.page || 1}: ${response.data.results?.length || 0} items`);
+    console.log(`📊 Total: ${response.data.count} applications`);
     
-    // Handle both paginated and non-paginated responses
-    const data = response.data.results || response.data;
-    
-    console.log(`✅ Fetched ${data.length} applications`);
-    
-    return data;
+    // Returns paginated response: { count, next, previous, results }
+    return response.data;
   } catch (error) {
     console.error('❌ Error fetching applications:', error);
     throw error;
@@ -166,7 +185,7 @@ export const deleteApplication = async (id) => {
 // PATCH - Update only status
 export const updateApplicationStatus = async (id, status) => {
   try {
-    const response = await api.patch(`/applications/${id}/`, { status });
+    const response = await api.patch(`/applications/${id}/update_status/`, { status });
     return response.data;
   } catch (error) {
     console.error(`❌ Error updating status for application ${id}:`, error);
@@ -177,7 +196,7 @@ export const updateApplicationStatus = async (id, status) => {
 // PATCH - Update only feedback
 export const updateApplicationFeedback = async (id, feedback, remarks = '') => {
   try {
-    const response = await api.patch(`/applications/${id}/`, { feedback, remarks });
+    const response = await api.patch(`/applications/${id}/update_feedback/`, { feedback, remarks });
     return response.data;
   } catch (error) {
     console.error(`❌ Error updating feedback for application ${id}:`, error);
@@ -214,15 +233,48 @@ export const getPoliceStations = async () => {
 };
 
 export const getCategories = async () => {
-  try {
+  try{
     const response = await api.get('/categories/');
     return response.data;
-  } catch (error) {
+  } 
+  catch (error) {
     console.error('❌ Error fetching categories:', error);
     throw error;
   }
 };
 
+export const getDivisions = async () => {
+  const response = await api.get('/divisions/');
+  return response.data;
+};
+// ⚡ EXPORT ALL APPLICATIONS (No pagination limits)
+export const exportApplications = async (params = {}) => {
+  try {
+    console.time('⚡ Export All Applications');
+    
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.police_station) queryParams.append('police_station', params.police_station);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.feedback) queryParams.append('feedback', params.feedback);
+    if (params.from_date) queryParams.append('from_date', params.from_date);
+    if (params.to_date) queryParams.append('to_date', params.to_date);
+    if (params.ordering) queryParams.append('ordering', params.ordering);
+    
+    const response = await api.get(`/export-applications/?${queryParams.toString()}`);
+    
+    console.timeEnd('⚡ Export All Applications');
+    console.log(`✅ Fetched ${response.data.count} applications for export`);
+    
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error exporting applications:', error);
+    throw error;
+  }
+};
 // ==========================================
 // EXCEL UPLOAD API
 // ==========================================
@@ -247,6 +299,7 @@ export const uploadExcel = async (file) => {
     throw error;
   }
 };
+
 // ⭐ STAFF MANAGEMENT APIs
 export const getAllStaff = async () => {
   const response = await api.get('/staff/');
@@ -273,14 +326,6 @@ export const deleteStaff = async (id) => {
   return response.data;
 };
 
-export const getDivisions = async () => {
-  const response = await api.get('/divisions/');
-  return response.data;
-};
-
-// ==========================================
-// VIDEO FEEDBACK APIs
-// ==========================================
 // ==========================================
 // VIDEO FEEDBACK APIs
 // ==========================================
@@ -290,24 +335,12 @@ export const getAllVideoFeedback = async (params = {}) => {
     console.log('🎥 Fetching video feedback...');
     const response = await api.get('/video-feedback/', { params });
     
-    // Handle both array and object responses
     const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
     
     console.log(`✅ Fetched ${data.length} videos`);
     return data;
   } catch (error) {
     console.error('❌ Error fetching video feedback:', error);
-    console.error('Response:', error.response?.data);
-    console.error('Status:', error.response?.status);
-    
-    // If unauthorized, might be a permission issue
-    if (error.response?.status === 401) {
-      console.error('🔒 Unauthorized - Check if user is logged in and has valid token');
-    }
-    if (error.response?.status === 403) {
-      console.error('🚫 Forbidden - User might not be admin');
-    }
-    
     throw error;
   }
 };
@@ -343,7 +376,6 @@ export const getVideoFeedbackStats = async () => {
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching video feedback stats:', error);
-    // Return default stats if error
     return { total: 0, pending: 0, liked: 0, disliked: 0 };
   }
 };

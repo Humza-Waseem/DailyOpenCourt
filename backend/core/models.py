@@ -1,5 +1,7 @@
+# backend/core/models.py
+
 from django.db import models
-from django.contrib. auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     ROLE_CHOICES = [
@@ -55,10 +57,25 @@ class OpenCourtApplication(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        # ⚡ DATABASE INDEXES FOR SUPER FAST QUERIES
+        indexes = [
+            models.Index(fields=['police_station'], name='idx_police_station'),
+            models.Index(fields=['division'], name='idx_division'),
+            models.Index(fields=['category'], name='idx_category'),
+            models.Index(fields=['status'], name='idx_status'),
+            models.Index(fields=['feedback'], name='idx_feedback'),
+            models.Index(fields=['date'], name='idx_date'),
+            models.Index(fields=['created_at'], name='idx_created_at'),
+            models.Index(fields=['sr_no'], name='idx_sr_no'),
+            models.Index(fields=['dairy_no'], name='idx_dairy_no'),
+            models.Index(fields=['name'], name='idx_name'),
+            # Composite indexes for common filter combinations
+            models.Index(fields=['police_station', 'status'], name='idx_ps_status'),
+            models.Index(fields=['status', 'feedback'], name='idx_status_feedback'),
+        ]
     
     def __str__(self):
-        return f"{self. dairy_no} - {self.name}"
-
+        return f"{self.dairy_no} - {self.name}"
 
 class VideoFeedback(models.Model):
     FEEDBACK_CHOICES = [

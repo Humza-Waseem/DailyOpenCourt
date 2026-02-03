@@ -50,20 +50,23 @@ const Analytics = () => {
     fetchAllData();
   }, []);
 
-  const fetchAllData = async () => {
-    setRefreshing(true);
-    try {
-      const appsData = await getApplications({});
-      setApplications(appsData);
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('❌ Error fetching analytics:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+ // frontend/src/pages/Analytics.js
 
+// Find this section (around line 50-70):
+const fetchAllData = async () => {
+  setRefreshing(true);
+  try {
+    const appsData = await getApplications({});
+    // ⚡ FIX: Handle paginated response
+    setApplications(appsData.results || appsData || []); // Changed this line
+    setLastUpdate(new Date());
+  } catch (error) {
+    console.error('❌ Error fetching analytics:', error);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
   // Filter applications by date range
   const filteredApplications = useMemo(() => {
     if (!fromDate && !toDate) return applications;

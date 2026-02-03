@@ -1,3 +1,5 @@
+# backend/backend/settings.py
+
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -26,6 +28,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'django_filters',  # ⚡ ADD THIS LINE ONLY
 
     'core',
 ]
@@ -110,6 +113,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# ⚡ REPLACE YOUR REST_FRAMEWORK WITH THIS OPTIMIZED VERSION
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -119,6 +123,12 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
+    # ⚡ ADD THESE 3 LINES BELOW
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+        'rest_framework.filters.SearchFilter',
+    ],
 }
 
 SIMPLE_JWT = {

@@ -1,7 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+// frontend/src/pages/Applications.js
+
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  getApplications, 
+  getApplications,
+  exportApplications,  // ⚡ ADD THIS
   getPoliceStations, 
   getCategories,
   updateApplicationStatus,
@@ -57,12 +60,21 @@ const Applications = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
+  // ⚡ PAGINATION STATE (Server-Side)
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  
   // Data State
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   
   // Filter State
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [policeStations, setPoliceStations] = useState([]);
   const [selectedPS, setSelectedPS] = useState('');
@@ -74,33 +86,65 @@ const Applications = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  
   // Sorting State
-  const [sortField, setSortField] = useState('sr_no');
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
-  // ⭐ NEW: Fullscreen & Modal States
+  // ⭐ Fullscreen & Modal States
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
 
+  // ⚡ DEBOUNCE SEARCH (wait 500ms after user stops typing)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset to page 1 on new search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // ⚡ FETCH DATA WHEN FILTERS CHANGE (Server-Side)
   useEffect(() => {
     fetchApplications();
+  }, [page, pageSize, debouncedSearch, statusFilter, selectedPS, selectedCategory, feedbackFilter, fromDate, toDate, sortField, sortDirection]);
+
+  // Fetch metadata on mount
+  useEffect(() => {
     fetchMetadata();
   }, []);
 
   const fetchApplications = async () => {
-    setLoading(true);
+    setLoading(page === 1);
+    setRefreshing(page !== 1);
     try {
-      const data = await getApplications({});
-      setApplications(data.results || data);
+      // ⚡ BUILD ORDERING STRING
+      const ordering = sortDirection === 'desc' ? `-${sortField}` : sortField;
+      
+      // ⚡ CALL API WITH PAGINATION AND FILTERS
+      const data = await getApplications({
+        page,
+        page_size: pageSize,
+        search: debouncedSearch,
+        status: statusFilter,
+        police_station: selectedPS,
+        category: selectedCategory,
+        feedback: feedbackFilter,
+        from_date: fromDate,
+        to_date: toDate,
+        ordering
+      });
+      
+      // ⚡ SET PAGINATED DATA
+      setApplications(data.results || []);
+      setTotalCount(data.count || 0);
+      setTotalPages(Math.ceil((data.count || 0) / pageSize));
+      
     } catch (error) {
       console.error('Error fetching applications:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -111,17 +155,22 @@ const Applications = () => {
         getCategories()
       ]);
       
-      // ✅ FIX: Deduplicate police stations
+      // ✅ Deduplicate police stations
       const uniquePS = getUniqueValues(psData);
       setPoliceStations(uniquePS);
       
-      // ✅ FIX: Deduplicate categories
+      // ✅ Deduplicate categories
       const uniqueCat = getUniqueValues(catData);
       setCategories(uniqueCat);
       
     } catch (error) {
       console.error('Error fetching metadata:', error);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchApplications();
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -148,18 +197,18 @@ const Applications = () => {
     window.location.href = `tel:${contact}`;
   };
 
-  // ⭐ NEW: Fullscreen Toggle
+  // ⭐ Fullscreen Toggle
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
 
-  // ⭐ NEW: View Details in Modal
+  // ⭐ View Details in Modal
   const handleViewDetails = (app) => {
     setSelectedApplication(app);
     setShowDetailModal(true);
   };
 
-  // ⭐ NEW: Close Modal
+  // ⭐ Close Modal
   const closeDetailModal = () => {
     setShowDetailModal(false);
     setSelectedApplication(null);
@@ -168,184 +217,130 @@ const Applications = () => {
   // Sorting Handler
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-    setCurrentPage(1);
   };
 
-  // Export to Excel Function (WITHOUT CREATED AT)
-  const exportToExcel = () => {
-    try {
-      // Prepare data for export
-      const exportData = processedData.map((app, index) => ({
-        'SR NO': app.sr_no || '',
-        'DAIRY NO': app.dairy_no || '',
-        'NAME': app.name || '',
-        'CONTACT': app.contact || '',
-        'POLICE STATION': app.police_station || '',
-        'DIVISION': app.division || 'N/A',
-        'CATEGORY': app.category || '',
-        'MARKED TO': app.marked_to || 'N/A',
-        'STATUS': app.status || '',
-        'FEEDBACK': app.feedback || '',
-        'DATE': app.date ? formatDate(app.date) : 'N/A'
-      }));
+  // ⚡ EXPORT ALL MATCHING RECORDS TO EXCEL
+// At the top, update imports:
 
-      // Create worksheet
-      const ws = XLSX.utils.json_to_sheet(exportData);
+// Replace the exportAllToExcel function with this:
+const exportAllToExcel = async () => {
+  const hasFilters = search || statusFilter || selectedPS || selectedCategory || feedbackFilter || fromDate || toDate;
+  
+  const confirmMessage = hasFilters
+    ? `Export all ${totalCount} filtered applications to Excel?`
+    : `Export ALL ${totalCount} applications from database to Excel?`;
+  
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
 
-      // Set column widths
-      const colWidths = [
-        { wch: 8 },  // SR NO
-        { wch: 15 }, // DAIRY NO
-        { wch: 25 }, // NAME
-        { wch: 15 }, // CONTACT
-        { wch: 20 }, // POLICE STATION
-        { wch: 15 }, // DIVISION
-        { wch: 25 }, // CATEGORY
-        { wch: 20 }, // MARKED TO
-        { wch: 12 }, // STATUS
-        { wch: 12 }, // FEEDBACK
-        { wch: 15 }  // DATE
-      ];
-      ws['!cols'] = colWidths;
-
-      // Style the header row
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const address = XLSX.utils.encode_col(C) + "1";
-        if (!ws[address]) continue;
-        ws[address].s = {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "3B82F6" } },
-          alignment: { horizontal: "center", vertical: "center" }
-        };
-      }
-
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Applications');
-
-      // Generate filename with date and filters
-      const today = new Date().toISOString().split('T')[0];
-      let filename = `Open_Court_Applications_${today}`;
-      
-      if (fromDate && toDate) {
-        filename += `_${fromDate}_to_${toDate}`;
-      } else if (fromDate) {
-        filename += `_from_${fromDate}`;
-      } else if (toDate) {
-        filename += `_until_${toDate}`;
-      }
-      
-      if (selectedPS) {
-        filename += `_${selectedPS.replace(/\s+/g, '_')}`;
-      }
-      
-      filename += '.xlsx';
-
-      // Save file
-      XLSX.writeFile(wb, filename);
-
-      // Show success message
-      alert(`✅ Successfully exported ${exportData.length} applications to Excel!`);
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      alert('❌ Failed to export to Excel. Please try again.');
-    }
-  };
-
-  // Filter, Sort, and Paginate Data
-  const processedData = useMemo(() => {
-    let filtered = [...applications];
-
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(app =>
-        app.name?.toLowerCase().includes(searchLower) ||
-        app.dairy_no?.toLowerCase().includes(searchLower) ||
-        app.contact?.toLowerCase().includes(searchLower) ||
-        app.sr_no?.toString().includes(searchLower)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter) {
-      filtered = filtered.filter(app => app.status === statusFilter);
-    }
-
-    // ✅ FIX: Case-insensitive police station filter
-    if (selectedPS) {
-      filtered = filtered.filter(app => 
-        app.police_station?.trim().toLowerCase() === selectedPS.trim().toLowerCase()
-      );
-    }
-
-    // ✅ FIX: Case-insensitive category filter
-    if (selectedCategory) {
-      filtered = filtered.filter(app => 
-        app.category?.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
-      );
-    }
-
-    // Apply feedback filter
-    if (feedbackFilter) {
-      filtered = filtered.filter(app => app.feedback === feedbackFilter);
-    }
-
-    // Apply date range filter
-    if (fromDate) {
-      filtered = filtered.filter(app => {
-        if (!app.date) return false;
-        return new Date(app.date) >= new Date(fromDate);
-      });
-    }
-
-    if (toDate) {
-      filtered = filtered.filter(app => {
-        if (!app.date) return false;
-        return new Date(app.date) <= new Date(toDate);
-      });
-    }
-
-    // Sort data
-    filtered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-
-      if (aValue == null) aValue = '';
-      if (bValue == null) bValue = '';
-
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      const aStr = String(aValue).toLowerCase();
-      const bStr = String(bValue).toLowerCase();
-      
-      if (sortDirection === 'asc') {
-        return aStr.localeCompare(bStr);
-      } else {
-        return bStr.localeCompare(aStr);
-      }
+  setExporting(true);
+  try {
+    console.log('📥 Fetching all matching applications...');
+    
+    // ⚡ BUILD ORDERING STRING
+    const ordering = sortDirection === 'desc' ? `-${sortField}` : sortField;
+    
+    // ⚡ USE NEW EXPORT ENDPOINT (NO PAGINATION LIMIT)
+    const data = await exportApplications({
+      search: debouncedSearch,
+      status: statusFilter,
+      police_station: selectedPS,
+      category: selectedCategory,
+      feedback: feedbackFilter,
+      from_date: fromDate,
+      to_date: toDate,
+      ordering
     });
+    
+    const allData = data.results || [];
+    
+    if (allData.length === 0) {
+      alert('⚠️ No data to export!');
+      return;
+    }
 
-    return filtered;
-  }, [applications, search, statusFilter, selectedPS, selectedCategory, feedbackFilter, fromDate, toDate, sortField, sortDirection]);
+    console.log(`📊 Exporting ${allData.length} applications...`);
 
-  // Pagination
-  const totalPages = Math.ceil(processedData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = processedData.slice(startIndex, endIndex);
+    // Prepare data for export
+    const exportData = allData.map((app) => ({
+      'SR NO': app.sr_no || '',
+      'DAIRY NO': app.dairy_no || '',
+      'NAME': app.name || '',
+      'CONTACT': app.contact || '',
+      'POLICE STATION': app.police_station || '',
+      'DIVISION': app.division || 'N/A',
+      'CATEGORY': app.category || '',
+      'MARKED TO': app.marked_to || 'N/A',
+      'MARKED BY': app.marked_by || 'N/A',
+      'STATUS': app.status || '',
+      'FEEDBACK': app.feedback || '',
+      'DATE': app.date ? formatDate(app.date) : 'N/A',
+      'TIMELINE': app.timeline || 'N/A',
+      'DAYS': app.days || 'N/A',
+      'DAIRY PS': app.dairy_ps || 'N/A',
+      'REMARKS': app.remarks || ''
+    }));
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, selectedPS, selectedCategory, feedbackFilter, fromDate, toDate]);
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 8 }, { wch: 15 }, { wch: 25 }, { wch: 15 },
+      { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
+      { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 15 },
+      { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 40 }
+    ];
+    ws['!cols'] = colWidths;
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Applications');
+
+    // Generate filename
+    const today = new Date().toISOString().split('T')[0];
+    let filename = hasFilters 
+      ? `Filtered_Applications_${today}` 
+      : `All_Applications_${today}`;
+    
+    if (fromDate && toDate) {
+      filename += `_${fromDate}_to_${toDate}`;
+    } else if (fromDate) {
+      filename += `_from_${fromDate}`;
+    } else if (toDate) {
+      filename += `_until_${toDate}`;
+    }
+    
+    if (selectedPS) {
+      filename += `_${selectedPS.replace(/\s+/g, '_')}`;
+    }
+    
+    if (statusFilter) {
+      filename += `_${statusFilter}`;
+    }
+    
+    filename += '.xlsx';
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+
+    const message = hasFilters
+      ? `✅ Successfully exported ${exportData.length} filtered applications!`
+      : `✅ Successfully exported ALL ${exportData.length} applications!`;
+    alert(message);
+  } catch (error) {
+    console.error('Error exporting applications:', error);
+    alert('❌ Failed to export applications. Please try again.');
+  } finally {
+    setExporting(false);
+  }
+};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -378,13 +373,14 @@ const Applications = () => {
 
   const clearFilters = () => {
     setSearch('');
+    setDebouncedSearch('');
     setStatusFilter('');
     setSelectedPS('');
     setSelectedCategory('');
     setFeedbackFilter('');
     setFromDate('');
     setToDate('');
-    setCurrentPage(1);
+    setPage(1);
   };
 
   const SortIcon = ({ field }) => {
@@ -399,7 +395,7 @@ const Applications = () => {
   const renderPaginationButtons = () => {
     const buttons = [];
     const maxButtons = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
     let endPage = Math.min(totalPages, startPage + maxButtons - 1);
 
     if (endPage - startPage < maxButtons - 1) {
@@ -410,8 +406,8 @@ const Applications = () => {
       buttons.push(
         <button
           key={i}
-          onClick={() => setCurrentPage(i)}
-          className={`pagination-btn ${currentPage === i ? 'active' : ''}`}
+          onClick={() => setPage(i)}
+          className={`pagination-btn ${page === i ? 'active' : ''}`}
         >
           {i}
         </button>
@@ -421,7 +417,7 @@ const Applications = () => {
     return buttons;
   };
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -439,28 +435,37 @@ const Applications = () => {
         <div>
           <h2 className="page-title">Open Court Applications</h2>
           <p className="page-subtitle">
-            Total: <strong>{processedData.length}</strong> applications
-            {processedData.length !== applications.length && 
-              ` (filtered from ${applications.length})`
-            }
+            Showing {applications.length} of <strong>{totalCount}</strong> total applications
+            {hasActiveFilters && ' (filtered)'}
           </p>
         </div>
         <div className="header-actions">
-          {/* Export to Excel Button */}
+          {/* ⚡ SMART Export All Button */}
           <button 
-            onClick={exportToExcel} 
+            onClick={exportAllToExcel} 
             className="export-excel-btn"
-            disabled={processedData.length === 0}
-            title="Export to Excel"
+            disabled={exporting || totalCount === 0}
+            title={hasActiveFilters ? `Export all ${totalCount} filtered applications` : `Export ALL ${totalCount} applications`}
           >
-            <Download size={18} />
-            Export to Excel
+            {exporting ? (
+              <>
+                <RefreshCw size={18} className="spinning" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                Export All ({totalCount})
+              </>
+            )}
           </button>
-          <button onClick={fetchApplications} className="refresh-btn">
-            <RefreshCw size={18} />
+          
+          <button onClick={handleRefresh} className="refresh-btn" disabled={refreshing}>
+            <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
             Refresh
           </button>
-          {/* ⭐ NEW: Fullscreen Button */}
+          
+          {/* ⭐ Fullscreen Button */}
           <button 
             onClick={toggleFullscreen} 
             className="fullscreen-btn"
@@ -639,7 +644,7 @@ const Applications = () => {
               </tr>
             </thead>
             <tbody>
-              {currentData.length === 0 ? (
+              {applications.length === 0 ? (
                 <tr>
                   <td colSpan="12" className="no-data-cell">
                     <FileText size={48} color="#ccc" />
@@ -647,7 +652,7 @@ const Applications = () => {
                   </td>
                 </tr>
               ) : (
-                currentData.map((app) => (
+                applications.map((app) => (
                   <tr key={app.id} className="data-row">
                     <td className="cell-sr">{app.sr_no}</td>
                     <td className="cell-dairy">{app.dairy_no}</td>
@@ -678,7 +683,6 @@ const Applications = () => {
                     </td>
                     <td className="cell-date">{formatDate(app.date)}</td>
                     <td className="cell-actions">
-                      {/* ⭐ CHANGED: Now opens modal instead of navigating */}
                       <button 
                         onClick={() => handleViewDetails(app)}
                         className="view-btn"
@@ -695,23 +699,23 @@ const Applications = () => {
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* ⚡ PAGINATION CONTROLS */}
       {totalPages > 1 && (
         <div className="pagination-container">
           <div className="pagination-info">
-            Showing {startIndex + 1} to {Math.min(endIndex, processedData.length)} of {processedData.length} entries
+            Showing {applications.length} of {totalCount} entries (Page {page} of {totalPages})
           </div>
           <div className="pagination-controls">
             <button 
-              onClick={() => setCurrentPage(1)} 
-              disabled={currentPage === 1}
+              onClick={() => setPage(1)} 
+              disabled={page === 1}
               className="pagination-btn"
             >
               <ChevronsLeft size={18} />
             </button>
             <button 
-              onClick={() => setCurrentPage(currentPage - 1)} 
-              disabled={currentPage === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))} 
+              disabled={page === 1}
               className="pagination-btn"
             >
               <ChevronLeft size={18} />
@@ -720,15 +724,15 @@ const Applications = () => {
             {renderPaginationButtons()}
             
             <button 
-              onClick={() => setCurrentPage(currentPage + 1)} 
-              disabled={currentPage === totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+              disabled={page === totalPages}
               className="pagination-btn"
             >
               <ChevronRight size={18} />
             </button>
             <button 
-              onClick={() => setCurrentPage(totalPages)} 
-              disabled={currentPage === totalPages}
+              onClick={() => setPage(totalPages)} 
+              disabled={page === totalPages}
               className="pagination-btn"
             >
               <ChevronsRight size={18} />
@@ -737,10 +741,10 @@ const Applications = () => {
           <div className="items-per-page">
             <label>Items per page:</label>
             <select 
-              value={itemsPerPage} 
+              value={pageSize} 
               onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
+                setPageSize(Number(e.target.value));
+                setPage(1);
               }}
             >
               <option value={25}>25</option>
@@ -752,7 +756,7 @@ const Applications = () => {
         </div>
       )}
 
-      {/* ⭐ NEW: Detail Modal */}
+      {/* ⭐ Detail Modal */}
       {showDetailModal && selectedApplication && (
         <div className="modal-overlay-detail" onClick={closeDetailModal}>
           <div className="modal-content-detail" onClick={(e) => e.stopPropagation()}>

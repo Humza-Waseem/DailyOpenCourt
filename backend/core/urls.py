@@ -21,6 +21,9 @@ urlpatterns = [
     path('staff/<int:user_id>/', views.staff_detail, name='staff_detail'),
     path('divisions/', views.divisions_list, name='divisions_list'),
     
-    # ⭐ NEW: Video Feedback
+    # ⚡ NEW: Export endpoint (no pagination limit)
+    path('export-applications/', views.export_applications, name='export_applications'),
+    
+    # Video Feedback
     path('video-feedback-stats/', views.video_feedback_stats, name='video_feedback_stats'),
 ]

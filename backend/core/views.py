@@ -1,32 +1,67 @@
-from rest_framework import viewsets, status
+# backend/core/views.py
+
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Count, Q
 from django.utils.dateparse import parse_date
-import openpyxl
-from .models import VideoFeedback
-from .serializers import VideoFeedbackSerializer
-from django.utils import timezone
-# Add this to the existing imports at the top
 from django.contrib.auth.hashers import make_password
-from rest_framework.exceptions import ValidationError
-
+from django.utils import timezone
 from datetime import datetime
+import openpyxl
+from django_filters import rest_framework as django_filters
 
-from .models import OpenCourtApplication
+from .models import OpenCourtApplication, VideoFeedback
 from .serializers import (
     UserSerializer, 
     OpenCourtApplicationSerializer,
-    ApplicationStatsSerializer,
-    CategoryStatsSerializer,
-    PoliceStationStatsSerializer
+    VideoFeedbackSerializer,
 )
 
 User = get_user_model()
 
+
+# ⚡ CUSTOM PAGINATION CLASS
+class StandardResultsPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
+# ⚡ ADVANCED FILTER CLASS FOR APPLICATIONS
+class OpenCourtApplicationFilter(django_filters.FilterSet):
+    """Advanced filtering with search capability"""
+    search = django_filters.CharFilter(method='search_filter', label='Search')
+    police_station = django_filters.CharFilter(field_name='police_station', lookup_expr='iexact')
+    division = django_filters.CharFilter(field_name='division', lookup_expr='iexact')
+    category = django_filters.CharFilter(field_name='category', lookup_expr='iexact')
+    status = django_filters.ChoiceFilter(choices=OpenCourtApplication.STATUS_CHOICES)
+    feedback = django_filters.ChoiceFilter(choices=OpenCourtApplication.FEEDBACK_CHOICES)
+    from_date = django_filters.DateFilter(field_name='date', lookup_expr='gte')
+    to_date = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+    marked_to = django_filters.CharFilter(field_name='marked_to', lookup_expr='icontains')
+    
+    def search_filter(self, queryset, name, value):
+        """Multi-field search"""
+        return queryset.filter(
+            Q(name__icontains=value) |
+            Q(dairy_no__icontains=value) |
+            Q(contact__icontains=value) |
+            Q(sr_no__icontains=value)
+        )
+    
+    class Meta:
+        model = OpenCourtApplication
+        fields = ['police_station', 'division', 'category', 'status', 'feedback', 'marked_to']
+
+
+# =====================================================
+# AUTH VIEWS
+# =====================================================
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -78,155 +113,82 @@ def current_user(request):
     return Response(serializer.data)
 
 
+# =====================================================
+# ⚡ OPTIMIZED APPLICATION VIEWSET
+# =====================================================
+
+# =====================================================
+# ⚡ OPTIMIZED APPLICATION VIEWSET
+# =====================================================
+
 class OpenCourtApplicationViewSet(viewsets.ModelViewSet):
-    """ViewSet for Open Court Applications"""
-    queryset = OpenCourtApplication.objects.all()
+    """OPTIMIZED ViewSet with Pagination, Filtering, and Search"""
+    
+    # ⚡ CRITICAL: Define queryset at class level
+    queryset = OpenCourtApplication.objects.select_related('created_by').all()
     serializer_class = OpenCourtApplicationSerializer
     permission_classes = [IsAuthenticated]
     
-    # ⚡ DISABLE PAGINATION
-    pagination_class = None
+    # ⚡ ENABLE PAGINATION (CRITICAL FOR PERFORMANCE)
+    pagination_class = StandardResultsPagination
+    
+    # ⚡ ENABLE FILTERING AND ORDERING
+    filterset_class = OpenCourtApplicationFilter
+    filter_backends = [
+        django_filters.DjangoFilterBackend,
+        filters.OrderingFilter,
+        filters.SearchFilter
+    ]
+    
+    # ⚡ ALLOW ORDERING BY THESE FIELDS
+    ordering_fields = ['sr_no', 'created_at', 'date', 'name', 'status', 'police_station']
+    ordering = ['-created_at']  # Default ordering
+    
+    # ⚡ SEARCH FIELDS
+    search_fields = ['name', 'dairy_no', 'contact', 'sr_no']
     
     def get_queryset(self):
-        """Filter applications based on user role - FIXED"""
-        queryset = OpenCourtApplication.objects.all()
+        """Optimized queryset with select_related and role-based filtering"""
+        # ⚡ Use select_related to reduce database queries
+        queryset = OpenCourtApplication.objects.select_related('created_by').all()
         user = self.request.user
         
-        # 🔍 DEBUG: Print user and query info
-        print(f"\n{'='*80}")
-        print(f"🔍 API REQUEST from user: {user.username}")
-        print(f"   Role: {user.role}")
-        print(f"   Police Station: '{user.police_station}'")
-        print(f"   Total apps in DB: {OpenCourtApplication.objects.count()}")
-        
-        # 🆕 FIXED: Staff filtering with case-insensitive matching
-        if user.role == 'STAFF':
-            if user.police_station:
-                user_ps_clean = user.police_station.strip()
-                
-                # Show all police stations for debugging
-                all_ps = list(OpenCourtApplication.objects.values_list('police_station', flat=True).distinct())
-                print(f"\n📋 All Police Stations in DB ({len(all_ps)}):")
-                for ps in all_ps[:10]:
-                    count = OpenCourtApplication.objects.filter(police_station=ps).count()
-                    print(f"   - '{ps}' ({count} apps)")
-                
-                # Apply case-insensitive filter
-                queryset = queryset.filter(police_station__iexact=user_ps_clean)
-                
-                print(f"\n🔎 Filtering for staff: '{user_ps_clean}'")
-                print(f"   Matched applications: {queryset.count()}")
-                
-                if queryset.count() == 0:
-                    print(f"\n⚠️⚠️⚠️ WARNING: NO APPLICATIONS FOUND! ⚠️⚠️⚠️")
-                    print(f"   Staff's police_station '{user_ps_clean}' doesn't match any data")
-                    print(f"   Fix: Update user's police_station to match one of the above")
-            else:
-                print(f"\n⚠️ Staff user has NO police_station assigned - returning empty")
-                queryset = queryset.none()
-        else:
-            print(f"\n👤 Admin user - showing all {queryset.count()} applications")
-        
-        # Apply additional filters
-        status_param = self.request.query_params.get('status')
-        if status_param:
-            queryset = queryset.filter(status=status_param)
-            print(f"   Status filter: {status_param} → {queryset.count()} apps")
-        
-        ps_param = self.request.query_params.get('police_station')
-        if ps_param:
-            queryset = queryset.filter(police_station=ps_param)
-            print(f"   PS filter: {ps_param} → {queryset.count()} apps")
-        
-        category_param = self.request.query_params.get('category')
-        if category_param:
-            queryset = queryset.filter(category=category_param)
-            print(f"   Category filter: {category_param} → {queryset.count()} apps")
-        
-        # Date filters
-        from_date = self.request.query_params.get('from_date')
-        if from_date:
-            try:
-                parsed_from_date = parse_date(from_date)
-                if parsed_from_date:
-                    queryset = queryset.filter(date__gte=parsed_from_date)
-                    print(f"   From date: {parsed_from_date} → {queryset.count()} apps")
-            except Exception as e:
-                print(f"   ⚠️ Error parsing from_date: {e}")
-        
-        to_date = self.request.query_params.get('to_date')
-        if to_date:
-            try:
-                parsed_to_date = parse_date(to_date)
-                if parsed_to_date:
-                    queryset = queryset.filter(date__lte=parsed_to_date)
-                    print(f"   To date: {parsed_to_date} → {queryset.count()} apps")
-            except Exception as e:
-                print(f"   ⚠️ Error parsing to_date: {e}")
-        
-        # Search
-        search = self.request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) |
-                Q(dairy_no__icontains=search) |
-                Q(contact__icontains=search) |
-                Q(sr_no__icontains=str(search))
-            )
-            print(f"   Search: {search} → {queryset.count()} apps")
-        
-        # Order by primary key for consistent ordering
-        queryset = queryset.order_by('-created_at')
-        
-        print(f"\n✅ FINAL: Returning {queryset.count()} applications")
-        print(f"{'='*80}\n")
+        # Role-based filtering
+        if user.role == 'STAFF' and user.police_station:
+            queryset = queryset.filter(police_station__iexact=user.police_station.strip())
         
         return queryset
-
-    def list(self, request, *args, **kwargs):
-        """Return full data without pagination"""
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
+    
     def perform_create(self, serializer):
         """Set created_by to current user"""
         serializer.save(created_by=self.request.user)
     
-    def perform_update(self, serializer):
-        """Update application"""
-        serializer.save()
-    
-    def perform_destroy(self, instance):
-        """Delete application"""
-        instance.delete()
-    
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
         """Update application status"""
         application = self.get_object()
         new_status = request.data.get('status')
         
-        if new_status not in ['PENDING', 'HEARD', 'REFERRED', 'CLOSED']:
+        if new_status not in dict(OpenCourtApplication.STATUS_CHOICES):
             return Response(
                 {'error': 'Invalid status'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         application.status = new_status
-        application.save()
+        application.save(update_fields=['status', 'updated_at'])
         
         serializer = self.get_serializer(application)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['patch'])
     def update_feedback(self, request, pk=None):
         """Update application feedback"""
         application = self.get_object()
         feedback = request.data.get('feedback')
         remarks = request.data.get('remarks', '')
         
-        if feedback not in ['POSITIVE', 'NEGATIVE', 'PENDING']:
+        if feedback not in dict(OpenCourtApplication.FEEDBACK_CHOICES):
             return Response(
                 {'error': 'Invalid feedback'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -235,11 +197,13 @@ class OpenCourtApplicationViewSet(viewsets.ModelViewSet):
         application.feedback = feedback
         if remarks:
             application.remarks = remarks
-        application.save()
+        application.save(update_fields=['feedback', 'remarks', 'updated_at'])
         
         serializer = self.get_serializer(application)
         return Response(serializer.data)
-
+# =====================================================
+# EXCEL UPLOAD
+# =====================================================
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -331,19 +295,21 @@ def upload_excel(request):
         )
 
 
+# =====================================================
+# DASHBOARD & STATS
+# =====================================================
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_stats(request):
-    """Get dashboard statistics"""
+    """Get dashboard statistics - Optimized with aggregation"""
     user = request.user
     queryset = OpenCourtApplication.objects.all()
     
-    # Apply same filtering as get_queryset
     if user.role == 'STAFF' and user.police_station:
-        user_ps_clean = user.police_station.strip()
-        queryset = queryset.filter(police_station__iexact=user_ps_clean)
-        print(f"📊 Dashboard for staff '{user.username}': {queryset.count()} applications")
+        queryset = queryset.filter(police_station__iexact=user.police_station.strip())
     
+    # ⚡ Use aggregation for better performance
     stats = {
         'total_applications': queryset.count(),
         'pending': queryset.filter(status='PENDING').count(),
@@ -386,11 +352,15 @@ def dashboard_stats(request):
     })
 
 
+# =====================================================
+# METADATA ENDPOINTS
+# =====================================================
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def police_stations(request):
     """Get list of all police stations"""
-    stations = OpenCourtApplication.objects.values_list('police_station', flat=True).distinct()
+    stations = OpenCourtApplication.objects.values_list('police_station', flat=True).distinct().order_by('police_station')
     return Response(list(stations))
 
 
@@ -398,17 +368,26 @@ def police_stations(request):
 @permission_classes([IsAuthenticated])
 def categories(request):
     """Get list of all categories"""
-    cats = OpenCourtApplication.objects.values_list('category', flat=True).distinct()
+    cats = OpenCourtApplication.objects.values_list('category', flat=True).distinct().order_by('category')
     return Response(list(cats))
 
-# Add these new endpoints at the end of the file (around line 370)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def divisions_list(request):
+    """Get list of all divisions"""
+    divisions = OpenCourtApplication.objects.values_list('division', flat=True).distinct().exclude(division='').order_by('division')
+    return Response(list(divisions))
+
+
+# =====================================================
+# STAFF MANAGEMENT
+# =====================================================
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def staff_management(request):
-    """Staff Management - List all staff or create new staff (ADMIN only)"""
-    
-    # Only ADMIN can access
+    """Staff Management - ADMIN only"""
     if request.user.role != 'ADMIN':
         return Response(
             {'error': 'Only administrators can manage staff'},
@@ -416,17 +395,14 @@ def staff_management(request):
         )
     
     if request.method == 'GET':
-        # Get all staff users
         staff_users = User.objects.filter(role='STAFF').order_by('-date_joined')
         serializer = UserSerializer(staff_users, many=True)
         return Response(serializer.data)
     
     elif request.method == 'POST':
-        # Create new staff user
         try:
             data = request.data
             
-            # Validate required fields
             if not data.get('username'):
                 return Response({'error': 'Username is required'}, status=status.HTTP_400_BAD_REQUEST)
             if not data.get('password'):
@@ -434,11 +410,9 @@ def staff_management(request):
             if not data.get('police_station'):
                 return Response({'error': 'Police station is required'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Check if username already exists
             if User.objects.filter(username=data['username']).exists():
                 return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Create user
             user = User.objects.create(
                 username=data['username'],
                 email=data.get('email', ''),
@@ -448,7 +422,7 @@ def staff_management(request):
                 phone=data.get('phone', ''),
                 police_station=data.get('police_station', ''),
                 division=data.get('division', ''),
-                password=make_password(data['password'])  # Hash the password
+                password=make_password(data['password'])
             )
             
             serializer = UserSerializer(user)
@@ -461,9 +435,7 @@ def staff_management(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def staff_detail(request, user_id):
-    """Staff Detail - Get, Update or Delete specific staff (ADMIN only)"""
-    
-    # Only ADMIN can access
+    """Staff Detail - ADMIN only"""
     if request.user.role != 'ADMIN':
         return Response(
             {'error': 'Only administrators can manage staff'},
@@ -480,16 +452,13 @@ def staff_detail(request, user_id):
         return Response(serializer.data)
     
     elif request.method == 'PUT':
-        # Update staff user
         try:
             data = request.data
             
-            # Check if username is being changed and if it already exists
             if data.get('username') and data['username'] != staff_user.username:
                 if User.objects.filter(username=data['username']).exists():
                     return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Update fields
             staff_user.username = data.get('username', staff_user.username)
             staff_user.email = data.get('email', staff_user.email)
             staff_user.first_name = data.get('first_name', staff_user.first_name)
@@ -498,7 +467,6 @@ def staff_detail(request, user_id):
             staff_user.police_station = data.get('police_station', staff_user.police_station)
             staff_user.division = data.get('division', staff_user.division)
             
-            # Update password if provided
             if data.get('password'):
                 staff_user.password = make_password(data['password'])
             
@@ -511,48 +479,97 @@ def staff_detail(request, user_id):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
-        # Delete staff user
         staff_user.delete()
         return Response({'message': 'Staff deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def divisions_list(request):
-    """Get list of all divisions (unique)"""
-    divisions = OpenCourtApplication.objects.values_list('division', flat=True).distinct().exclude(division='')
-    return Response(sorted(list(set(divisions))))
-
-
-
-
-
+def export_applications(request):
+    """Export all applications matching filters - NO PAGINATION"""
+    user = request.user
+    
+    # Start with all applications
+    queryset = OpenCourtApplication.objects.select_related('created_by').all()
+    
+    # Apply role-based filtering
+    if user.role == 'STAFF' and user.police_station:
+        queryset = queryset.filter(police_station__iexact=user.police_station.strip())
+    
+    # Apply filters from request
+    search = request.query_params.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) |
+            Q(dairy_no__icontains=search) |
+            Q(contact__icontains=search) |
+            Q(sr_no__icontains=search)
+        )
+    
+    status_param = request.query_params.get('status')
+    if status_param:
+        queryset = queryset.filter(status=status_param)
+    
+    police_station = request.query_params.get('police_station')
+    if police_station:
+        queryset = queryset.filter(police_station__iexact=police_station)
+    
+    category = request.query_params.get('category')
+    if category:
+        queryset = queryset.filter(category__iexact=category)
+    
+    feedback = request.query_params.get('feedback')
+    if feedback:
+        queryset = queryset.filter(feedback=feedback)
+    
+    from_date = request.query_params.get('from_date')
+    if from_date:
+        try:
+            parsed_from_date = parse_date(from_date)
+            if parsed_from_date:
+                queryset = queryset.filter(date__gte=parsed_from_date)
+        except:
+            pass
+    
+    to_date = request.query_params.get('to_date')
+    if to_date:
+        try:
+            parsed_to_date = parse_date(to_date)
+            if parsed_to_date:
+                queryset = queryset.filter(date__lte=parsed_to_date)
+        except:
+            pass
+    
+    # Apply ordering
+    ordering = request.query_params.get('ordering', '-created_at')
+    queryset = queryset.order_by(ordering)
+    
+    # Serialize ALL data (no pagination)
+    serializer = OpenCourtApplicationSerializer(queryset, many=True)
+    
+    return Response({
+        'count': queryset.count(),
+        'results': serializer.data
+    })
+# =====================================================
+# VIDEO FEEDBACK
+# =====================================================
 
 class VideoFeedbackViewSet(viewsets.ModelViewSet):
-    """ViewSet for Video Feedback - Admin only"""
+    """Video Feedback - Admin only"""
     queryset = VideoFeedback.objects.all()
     serializer_class = VideoFeedbackSerializer
-    permission_classes = [IsAuthenticated]  # Keep this
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Only admins can access video feedback"""
-        user = self.request.user
-        
-        # ✅ Add debugging
-        print(f"🔍 User: {user.username}, Role: {user.role}, Is Admin: {user.role == 'ADMIN'}")
-        
-        if user.role != 'ADMIN':
-            print("❌ Access denied - User is not admin")
+        """Only admins can access"""
+        if self.request.user.role != 'ADMIN':
             return VideoFeedback.objects.none()
-        
-        videos = VideoFeedback.objects.all()
-        print(f"✅ Returning {videos.count()} videos for admin")
-        return videos
+        return VideoFeedback.objects.all()
     
     @action(detail=True, methods=['post'])
     def submit_feedback(self, request, pk=None):
-        """Submit like/dislike feedback on video"""
-        # ✅ Check admin permission
+        """Submit feedback on video"""
         if request.user.role != 'ADMIN':
             return Response(
                 {'error': 'Admin access required'},
@@ -560,7 +577,7 @@ class VideoFeedbackViewSet(viewsets.ModelViewSet):
             )
         
         video = self.get_object()
-        feedback_type = request.data.get('feedback')  # 'LIKE' or 'DISLIKE'
+        feedback_type = request.data.get('feedback')
         remarks = request.data.get('remarks', '')
         
         if feedback_type not in ['LIKE', 'DISLIKE']:
@@ -577,12 +594,14 @@ class VideoFeedbackViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(video)
         return Response(serializer.data)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def video_feedback_stats(request):
     """Get video feedback statistics"""
     if request.user.role != 'ADMIN':
-        return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'total': 0, 'pending': 0, 'liked': 0, 'disliked': 0})
     
     total = VideoFeedback.objects.count()
     pending = VideoFeedback.objects.filter(admin_feedback='PENDING').count()
