@@ -1,17 +1,21 @@
 # DailyOpenCourt - Setup and Installation Guide
 
-A full-stack web application for managing Open Court Applications with Django backend and React frontend.
+A comprehensive court management system built with Django (backend) and React (frontend).
+
+---
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed on your system:
 
-- **Python 3.8+** (Python 3.10 or higher recommended)
-- **Node.js 16+** and **npm** (Node.js 18 or higher recommended)
-- **Git** (to clone the repository)
-- **pip** (Python package manager)
+- **Python 3.8+** - [Download Python](https://www.python.org/downloads/)
+- **Node.js 16+** and **npm** - [Download Node.js](https://nodejs.org/)
+- **PostgreSQL** (Optional but recommended for production)
+- **Git** - [Download Git](https://git-scm.com/downloads/)
 
-## 🚀 Installation Steps
+---
+
+## 🚀 Getting Started
 
 ### 1. Clone the Repository
 
@@ -44,10 +48,12 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
+You should see `(venv)` prefix in your terminal indicating the virtual environment is active.
+
 ### 4. Install Backend Dependencies
 
 ```bash
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers openpyxl pillow
+pip install django djangorestframework djangorestframework-simplejwt django-cors-headers openpyxl pillow python-dotenv django-filter psycopg2-binary
 ```
 
 **Key Dependencies:**
@@ -55,106 +61,136 @@ pip install django djangorestframework djangorestframework-simplejwt django-cors
 - `djangorestframework` - REST API framework
 - `djangorestframework-simplejwt` - JWT authentication
 - `django-cors-headers` - CORS support for frontend communication
+- `django-filter` - API filtering support
 - `openpyxl` - Excel file processing
 - `pillow` - Image/file handling
+- `python-dotenv` - Environment variable management
+- `psycopg2-binary` - PostgreSQL database adapter
 
-### 5. Apply Database Migrations
+### 5. Configure Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
+**For SQLite (Development):**
+```env
+DB_ENGINE=django.db.backends.sqlite3
+DB_NAME=db.sqlite3
+```
+
+**For PostgreSQL (Production):**
+```env
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+### 6. Apply Database Migrations
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 6. Create Superuser (Admin Account)
+This creates all necessary database tables.
+
+### 7. Create Superuser (Admin Account)
 
 ```bash
 python manage.py createsuperuser
 ```
 
 Follow the prompts to set:
-- Username
-- Email (optional)
-- Password
+- **Username** (e.g., admin)
+- **Email** (optional, can press Enter to skip)
+- **Password** (enter a secure password)
 
-### 7. Create Media Directories
+### 8. Create Media Directories
 
-```bash
-mkdir -p media/video_feedback media/video_responses media/documents
-```
+These directories are required for file uploads:
 
 **On Windows:**
 ```bash
 mkdir media\video_feedback media\video_responses media\documents
 ```
 
-### 8. Run Backend Development Server
+**On macOS/Linux:**
+```bash
+mkdir -p media/video_feedback media/video_responses media/documents
+```
+
+### 9. Run Backend Development Server
 
 ```bash
 python manage.py runserver
 ```
 
-✅ Backend should now be running at: **http://localhost:8000**
+✅ **Backend is now running at:** `http://localhost:8000`
 
-**To verify backend is working:**
-- Admin panel: http://localhost:8000/admin
-- API endpoint: http://localhost:8000/api/
+**Verify backend is working:**
+- Admin panel: `http://localhost:8000/admin`
+- API endpoint: `http://localhost:8000/api/`
+
+**Login to admin panel** using the superuser credentials you created in Step 7.
 
 ---
 
 ## 🎨 Frontend Setup (React)
 
-### 9. Open New Terminal and Navigate to Frontend Directory
+### 10. Open New Terminal and Navigate to Frontend Directory
+
+**Important:** Keep the backend server running in the previous terminal!
+
+Open a **new terminal window/tab** and run:
 
 ```bash
-cd frontend
+cd DailyOpenCourt-WithoutPush/frontend
 ```
 
-*Note: Keep the backend server running in the previous terminal*
-
-### 10. Install Frontend Dependencies
+### 11. Install Frontend Dependencies
 
 ```bash
 npm install
 ```
 
-**Key Dependencies (automatically installed):**
+This will install all required packages including:
 - `react` & `react-dom` - Core React libraries
 - `react-router-dom` - Routing
 - `axios` - HTTP client for API calls
 - `@tanstack/react-query` - Data fetching and caching
 - `recharts` - Charts and data visualization
-- `lucide-react` - Icons
+- `lucide-react` & `react-icons` - Icons
 - `xlsx` - Excel file handling
 
-### 11. Start Frontend Development Server
+### 12. Start Frontend Development Server
 
 ```bash
 npm start
 ```
 
-✅ Frontend should automatically open at: **http://localhost:3000**
+✅ **Frontend will automatically open at:** `http://localhost:3000`
 
-If it doesn't open automatically, manually navigate to http://localhost:3000 in your browser.
+If it doesn't open automatically, manually navigate to `http://localhost:3000` in your browser.
 
 ---
 
-## 🔐 First Time Login
+## 🎯 Accessing the Application
 
-### Default Admin Credentials:
+### Login to the Application
 
-Use the superuser account you created in **Step 6**.
+1. Open your browser and go to `http://localhost:3000`
+2. Use the superuser credentials you created in Step 7:
+   - **Username:** (your superuser username)
+   - **Password:** (your superuser password)
 
-### Creating Additional Users:
+### Creating Additional Users
 
-1. Go to Django Admin: http://localhost:8000/admin
-2. Log in with superuser credentials
-3. Navigate to **Users** → **Add User**
-4. Fill in details:
-   - **Username**: staff username
-   - **Password**: set password
-   - **Role**: Choose `ADMIN` or `STAFF`
-   - **Police Station**: Assign police station (for STAFF role)
-   - **Division**: Assign division
+1. Go to the admin panel: `http://localhost:8000/admin`
+2. Log in with your superuser account
+3. Navigate to **Users** section
+4. Click **Add User** to create new accounts
 
 ---
 
@@ -166,7 +202,7 @@ If you have an Excel file with application data:
 
 1. Place your Excel file in the `backend/` directory
 2. Edit `backend/load_excel_data.py` and update the file path at the bottom
-3. Run:
+3. Activate virtual environment and run:
 ```bash
 python load_excel_data.py
 ```
@@ -175,24 +211,12 @@ python load_excel_data.py
 
 If you have video files for feedback:
 
-1. Create a folder with video files
+1. Create a folder with video files in the `backend/` directory
 2. Edit `backend/load_videos.py` and update the folder path at the bottom
 3. Run:
 ```bash
 python load_videos.py
 ```
-
----
-
-## 🌐 API Configuration
-
-### Backend API Base URL:
-
-The frontend connects to the backend at `http://localhost:8000/api/`
-
-If you need to change this:
-1. Look for API configuration in `frontend/src/` directory
-2. Update the base URL in the axios or API configuration file
 
 ---
 
@@ -213,6 +237,9 @@ DailyOpenCourt-WithoutPush/
 │   │   ├── urls.py           # App URLs
 │   │   └── admin.py          # Admin configuration
 │   ├── media/                # Uploaded files
+│   │   ├── video_feedback/
+│   │   ├── video_responses/
+│   │   └── documents/
 │   ├── manage.py             # Django management script
 │   ├── load_excel_data.py    # Excel data loader
 │   └── load_videos.py        # Video feedback loader
@@ -222,6 +249,7 @@ DailyOpenCourt-WithoutPush/
     ├── src/                  # React source code
     │   ├── components/       # React components
     │   ├── pages/            # Page components
+    │   ├── services/         # API services
     │   └── App.js            # Main app component
     ├── package.json          # NPM dependencies
     └── README.md             # React documentation
@@ -229,7 +257,7 @@ DailyOpenCourt-WithoutPush/
 
 ---
 
-## 🛠��� Common Commands
+## 🛠️ Common Commands
 
 ### Backend Commands:
 
@@ -254,6 +282,9 @@ python manage.py createsuperuser
 
 # Access Django shell
 python manage.py shell
+
+# Collect static files (for production)
+python manage.py collectstatic
 ```
 
 ### Frontend Commands:
@@ -274,98 +305,120 @@ npm install <package-name>
 
 ---
 
+## ⚙️ API Configuration
+
+### Backend API Base URL:
+
+The frontend connects to the backend at `http://localhost:8000/api/`
+
+If you need to change this, update the base URL in:
+- `frontend/src/services/api.js`
+
+### CORS Configuration:
+
+The backend is configured to accept requests from:
+- `http://localhost:3000`
+
+To add additional origins, edit `backend/backend/settings.py`:
+```python
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://yourdomain.com',  # Add your domain
+]
+```
+
+---
+
 ## 🔧 Troubleshooting
 
-### Backend Issues:
+### Port Already in Use
 
-**Error: "No module named 'django'"**
-- Solution: Activate virtual environment and install dependencies
+**Backend (Port 8000):**
 ```bash
-venv\Scripts\activate  # Windows
-pip install django
+# Find and kill process on port 8000 (Windows)
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
+
+# macOS/Linux
+lsof -ti:8000 | xargs kill -9
 ```
 
-**Error: "Port 8000 is already in use"**
-- Solution: Run on different port
+**Frontend (Port 3000):**
 ```bash
-python manage.py runserver 8001
+# Find and kill process on port 3000 (Windows)
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+
+# macOS/Linux
+lsof -ti:3000 | xargs kill -9
 ```
 
-**Database errors:**
-- Solution: Delete `db.sqlite3` and rerun migrations
+### Virtual Environment Not Activating
+
+Make sure you're in the `backend` directory and the `venv` folder exists. If not, recreate it:
 ```bash
-del db.sqlite3  # Windows
-rm db.sqlite3   # macOS/Linux
+python -m venv venv
+```
+
+### Database Errors
+
+If you encounter database errors, try:
+```bash
+# Delete database and migrations
+rm db.sqlite3
+rm -rf core/migrations
+
+# Recreate migrations
+python manage.py makemigrations core
 python manage.py migrate
+python manage.py createsuperuser
 ```
 
-### Frontend Issues:
+### Frontend Module Not Found
 
-**Error: "npm command not found"**
-- Solution: Install Node.js from https://nodejs.org/
-
-**Error: "Port 3000 already in use"**
-- Solution: Kill the process or use different port
+If npm packages are missing:
 ```bash
-# Set different port (add to package.json scripts or use environment variable)
-PORT=3001 npm start  # macOS/Linux
-set PORT=3001 && npm start  # Windows
-```
-
-**Dependencies installation fails:**
-- Solution: Clear cache and reinstall
-```bash
-npm cache clean --force
+# Delete node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
----
+### CORS Errors
 
-## 📝 Features
-
-- 🔐 **JWT Authentication** - Secure login system
-- 📊 **Dashboard** - Statistics and analytics
-- 📋 **Application Management** - CRUD operations for court applications
-- 🎥 **Video Feedback** - Video upload and review system
-- 👥 **Staff Management** - Multi-user support with role-based access
-- 📈 **Data Visualization** - Charts and graphs using Recharts
-- 📤 **Excel Import/Export** - Bulk data operations
-- 🔍 **Filtering & Search** - Advanced data filtering
-
----
-
-## 👥 User Roles
-
-### ADMIN Role:
-- Full access to all applications across all divisions
-- Can create/edit/delete staff users
-- View dashboard statistics
-- Manage video feedback
-
-### STAFF Role:
-- Access limited to assigned police station
-- View and update applications for their station
-- Submit video feedback
-- View station-specific statistics
+Ensure:
+1. Backend is running on `http://localhost:8000`
+2. Frontend is running on `http://localhost:3000`
+3. `CORS_ALLOWED_ORIGINS` in `settings.py` includes `http://localhost:3000`
 
 ---
 
 ## 🚀 Production Deployment
 
-For production deployment:
-
 ### Backend:
+
 1. Set `DEBUG = False` in `backend/backend/settings.py`
-2. Configure `ALLOWED_HOSTS`
-3. Set up proper database (PostgreSQL recommended)
-4. Use gunicorn or uWSGI as WSGI server
-5. Configure static/media file serving
+2. Configure `ALLOWED_HOSTS`:
+```python
+ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
+```
+3. Set up PostgreSQL database (recommended)
+4. Use gunicorn or uWSGI as WSGI server:
+```bash
+pip install gunicorn
+gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+```
+5. Configure static/media file serving with Nginx or Apache
+6. Set up proper environment variables for production
 
 ### Frontend:
-1. Run `npm run build` to create optimized production build
-2. Serve the `build/` directory using Nginx or Apache
-3. Configure environment variables for API endpoints
+
+1. Update API base URL in `frontend/src/services/api.js` to your production backend URL
+2. Build the production version:
+```bash
+npm run build
+```
+3. Serve the `build/` directory using Nginx, Apache, or a static hosting service
+4. Configure environment variables for production API endpoints
 
 ---
 
@@ -373,8 +426,9 @@ For production deployment:
 
 For issues or questions:
 - Check the [GitHub repository](https://github.com/AsadUllah-11/DailyOpenCourt-WithoutPush)
-- Review error messages in browser console and terminal
+- Review error messages in browser console (F12) and terminal
 - Ensure all dependencies are properly installed
+- Verify both backend and frontend servers are running
 
 ---
 
@@ -382,14 +436,17 @@ For issues or questions:
 
 - [ ] Clone repository
 - [ ] Install Python 3.8+ and Node.js 16+
-- [ ] Set up backend virtual environment
+- [ ] Navigate to `backend/` directory
+- [ ] Create and activate Python virtual environment
 - [ ] Install backend dependencies
+- [ ] Create `.env` file with database configuration
 - [ ] Run database migrations
 - [ ] Create superuser account
 - [ ] Create media directories
-- [ ] Start backend server (http://localhost:8000)
-- [ ] Install frontend dependencies
-- [ ] Start frontend server (http://localhost:3000)
+- [ ] Start backend server at `http://localhost:8000`
+- [ ] Open new terminal and navigate to `frontend/` directory
+- [ ] Install frontend dependencies with `npm install`
+- [ ] Start frontend server at `http://localhost:3000`
 - [ ] Log in with superuser credentials
 - [ ] Create additional users via admin panel (if needed)
 
