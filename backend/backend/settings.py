@@ -64,16 +64,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+# ⚡ DEVELOPMENT: Using SQLite (no PostgreSQL needed on macOS)
 DATABASES = {
     'default': {
-           "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Note: For production, uncomment below and set environment variables:
+# DATABASES = {
+#     'default': {
+#         "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+#         "NAME": os.getenv("DB_NAME"),
+#         "USER": os.getenv("DB_USER"),
+#         "PASSWORD": os.getenv("DB_PASSWORD"),
+#         "HOST": os.getenv("DB_HOST", "localhost"),
+#         "PORT": os.getenv("DB_PORT", "5432"),
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = [
     {

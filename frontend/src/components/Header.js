@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LogOut, User, Shield, MapPin, Building, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import  CasesCounter  from './CasesCounter';
 import './Header.css';
 
 const Header = () => {
@@ -24,9 +25,10 @@ const Header = () => {
     <header className="app-header">
       <div className="header-left">
         {/* Logo with fallback */}
+        
         <div className="header-logo-wrapper">
           <img 
-            src="/punjab-police-logo.jpeg" 
+            src="/punjab-police-logo.png" 
             alt="Punjab Police" 
             className="header-logo"
             onError={(e) => {
@@ -40,9 +42,12 @@ const Header = () => {
         </div>
         <div className="header-text">
           <h1 className="header-title">Daily Open Court</h1>
-          <p className="header-subtitle">Punjab Police</p>
+          <p className="header-subtitle">DIG OPS Lahore - MR. Faisal Kamran</p>
         </div>
       </div>
+      {/* <div className="header-middle">
+      <CasesCounter />
+      </div> */}
       
       <div className="header-right">
         {/* Enhanced User Info Card */}

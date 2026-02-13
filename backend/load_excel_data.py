@@ -178,5 +178,5 @@ def load_excel_data(file_path):
 
 if __name__ == '__main__':
     # Your Excel file path
-    excel_file_path = r"D:\\seven semester\\FYP\\daily open court\\April3File.xlsx"
+    excel_file_path = r"/Volumes/disk/Hamza/OpenCourt/DailyOpenCourt-WithoutPush/backend/April3File (1).xlsx"
     load_excel_data(excel_file_path)

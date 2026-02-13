@@ -34,7 +34,7 @@ const Login = () => {
       <div className="login-card">
         <div className="login-header">
           <img 
-            src="/punjab-police-logo.jpeg" 
+            src="Adobe Express - file.jpeg" 
             alt="Punjab Police" 
             className="login-logo"
             onError={(e) => e.target.style.display = 'none'}

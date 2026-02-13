@@ -10,7 +10,19 @@ import {
   ThumbsDown,
   AlertCircle 
 } from 'lucide-react';
+import CasesCounter from '../components/CasesCounter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const COLORS = [
+  "#06327b",
+  "#ef4444",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+];
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -108,21 +120,30 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
-
+  
       <div className="charts-grid">
         {/* Category Distribution */}
         <div className="chart-card">
-          <h3>Top Categories</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stats?.category_stats?. slice(0, 8) || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="category" angle={-45} textAnchor="end" height={100} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+  <h3>Top Categories</h3>
+  <ResponsiveContainer width="100%" height={300}>
+    <BarChart data={stats?.category_stats?.slice(0, 8) || []}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis
+        dataKey="category"
+        angle={-45}
+        textAnchor="end"
+        height={100}
+      />
+      <YAxis />
+      <Tooltip />
+      <Bar dataKey="count">
+        {(stats?.category_stats?.slice(0, 8) || []).map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Bar>
+    </BarChart>
+  </ResponsiveContainer>
+</div>
 
         {/* Police Station Stats (DIG only) */}
         {user?.role === 'DIG' && stats?.police_station_stats?.length > 0 && (

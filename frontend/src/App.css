@@ -17,13 +17,17 @@
   --white: #ffffff;
   --text-primary: #1e3a8a;
   --text-secondary: #64748b;
-  --border-color: #e2e8f0;
+  --border-color: #e2e8f0;  
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
   --purple: #8b5cf6;
   --shadow: 0 4px 6px rgba(30, 64, 175, 0.1);
   --shadow-lg: 0 10px 25px rgba(30, 64, 175, 0.15);
+  --bg-main : linear-gradient(180deg, rgb(36 42 58 / 98%), rgb(16 17 22 / 98%));
+  --btn-main: linear-gradient(180deg, rgb(90 106 143 / 98%), rgb(20 25 39 / 98%));
+  --light-hero-bg: radial-gradient(#ffffff, rgb(118, 162, 250) 11.76%, rgb(211, 225, 251) 48.74%, #ffffff 86.97%);
+  --dark-hero-bg: radial-gradient(ellipse 400% 240% at 50% 100%, #fff, #fff 10%, 15%, #c7c5fd 16%, #9a67fa99 17%, 21%, #264cab 28%, 35%, #00031d 45%, #00031d)
 }
 
 body {
@@ -128,7 +132,7 @@ body {
 
 .login-btn {
   padding: 1rem;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background: var(--bg-main);
   color: var(--white);
   border: none;
   border-radius:  10px;
@@ -187,7 +191,7 @@ body {
 }
 
 .app-header {
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background: var(--bg-main);
   color: var(--white);
   padding: 1rem 2rem;
   display: flex;
@@ -205,14 +209,7 @@ body {
   gap: 1rem;
 }
 
-.header-logo {
-  width: 50px;
-  height: 50px;
-  object-fit:  contain;
-  background-color: var(--white);
-  padding: 5px;
-  border-radius:  10px;
-}
+
 
 .header-title {
   font-size:  1.5rem;
@@ -311,7 +308,7 @@ body {
 }
 
 .sidebar-link.active {
-  background:  linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background:  var(--bg-main);
   color: var(--white);
   box-shadow: var(--shadow);
 }
@@ -490,7 +487,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background: var(--bg-main);
   color: var(--white);
   border: none;
   border-radius: 10px;
@@ -641,7 +638,7 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--light-blue);
+  background-color: var(--bg-main);
   color: var(--white);
 }
 
@@ -743,7 +740,7 @@ body {
 
 .upload-btn {
   padding: 1rem 3rem;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background: var(--bg-main);
   color: var(--white);
   border: none;
   border-radius: 10px;
@@ -931,7 +928,7 @@ body {
 }
 
 .data-table thead {
-  background:  linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  background:  var(--bg-main);
   color: var(--white);
 }
 
@@ -1257,6 +1254,7 @@ body {
 /* Add to existing App.css */
 
 /* Header Logo Fix */
+
 .header-logo-wrapper {
   position: relative;
   width: 50px;
@@ -1270,9 +1268,10 @@ body {
 }
 
 .header-logo {
-  width: 100%;
-  height: 100%;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
+
 }
 
 .header-logo-fallback {

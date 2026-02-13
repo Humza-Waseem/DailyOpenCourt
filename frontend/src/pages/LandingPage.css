@@ -30,7 +30,7 @@ html {
   right: 0;
   z-index: 1000;
   padding: 1rem 3rem;
-  background: #1e40af;
+  background: var(--bg-main);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
@@ -50,14 +50,15 @@ html {
 }
 
 .nav-logo {
-  width: 50px;
-  height: 50px;
-  object-fit:  contain;
-  background: white;
-  padding: 6px;
-  border-radius:  12px;
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  /* background: white; */
+  /* padding: 6px; */
+  /* border-radius: 12px; */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
 
 .nav-title {
   color: white;
@@ -96,7 +97,7 @@ html {
 .hero-section {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eff6ff 100%);
+  background: var(--dark-hero-bg);
   overflow: hidden;
 }
 
@@ -123,18 +124,20 @@ html {
 /* HERO CONTENT */
 /* ==================== */
 
-.hero-content {
-  position: relative;
-  z-index: 10;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 110px 2rem 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  min-height: 100vh;
-  justify-content: center;
-}
+/* .hero-content { */
+  .hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 110px 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem; /* Increased from 2rem to 3rem for better spacing */
+    min-height: 100vh;
+    justify-content: center;
+  }
+/* } */
 
 .hero-text {
   animation: fadeInDown 0.8s ease-out;
@@ -189,14 +192,18 @@ html {
 
 .hero-title {
   font-size: 3. 5rem;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  /* background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); */
+  /* background: var(--text-primary); */
+
   -webkit-background-clip: text;
-  -webkit-text-fill-color:  transparent;
+  /* -webkit-text-fill-color:  transparent; */
   background-clip:  text;
   font-weight: 900;
-  margin:  0;
+  margin:  auto;
   line-height: 1.1;
   letter-spacing: -1px;
+  color: white;
+  padding-top: 15px;
 }
 
 .hero-subtitle {
@@ -209,7 +216,7 @@ html {
 
 .hero-description {
   font-size: 1.15rem;
-  color: #64748b;
+  color: #cecece;;
   line-height: 1.7;
   margin-bottom: 2rem;
   max-width: 750px;
@@ -239,7 +246,7 @@ html {
 }
 
 .btn-primary-hero {
-  background:  linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background:  var(--btn-main);
   color: white;
 }
 
@@ -467,6 +474,7 @@ html {
   text-align: center;
   font-size: 2.8rem;
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #242424 0%, #3a537c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color:  transparent;
   background-clip:  text;
@@ -512,6 +520,7 @@ html {
   height: 70px;
   margin:  0 auto 1.5rem;
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #030405 0%, #496eab 100%);
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -529,6 +538,7 @@ html {
 .feature-title {
   font-size: 1.4rem;
   color: #1e40af;
+  color: #35426d;
   margin-bottom: 0.75rem;
   font-weight:  700;
 }
@@ -545,9 +555,10 @@ html {
 
 .stats-section {
   padding: 4rem 2rem;
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+  /* background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%); */
   color: white;
   position: relative;
+  
 }
 
 .stats-section::before {
@@ -571,32 +582,139 @@ html {
 }
 
 .stat-item {
+  position: relative;
   text-align: center;
   padding: 2rem;
-  background: rgba(255, 255, 255, 0.15);
   border-radius: 18px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s ease;
+
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+
+  box-shadow:
+    25px 25px 60px rgba(0, 0, 0, 0.12),
+    -20px -20px 50px rgba(255, 255, 255, 0.55);
 }
 
 .stat-item:hover {
-  transform: translateY(-8px);
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-6px);
+  box-shadow:
+    25px 35px 65px rgba(0, 0, 0, 0.22),
+    -20px -20px 50px rgba(255, 255, 255, 0.65);
+}
+
+/* Inner Glow Panel */
+.stat-item::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(245, 245, 245, 0.6)
+  );
+  border-radius: 16px;
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Animated Aurora Blob */
+.stat-item::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  filter: blur(28px);
+  z-index: 0;
+
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, 0.6),
+    rgba(30, 64, 175, 0.3),
+    transparent
+  );
+
+  animation: stat-aurora-move 6.5s infinite ease-in-out;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.stat-number,
+.stat-label {
+  position: relative;
+  z-index: 2;
 }
 
 .stat-number {
   font-size: 3.5rem;
   font-weight: 900;
   margin-bottom: 0.5rem;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
 }
+.stat-cases{
+  color: #059669;
+}
+.stat-cases-text{
+  color: #059669 !important;
+}
+
+.stat-stations{
+  color: #D97706;
+}
+.stat-stations-text{
+  color: #D97706 !important;
+}
+
+.stat-availability{
+  color: #1E40AF;
+}
+.stat-availability-text{
+  color: #1E40AF !important;
+}
+
+.stat-security{
+  color: #7C3AED;
+}
+.stat-security-text{
+  color: #7C3AED !important;
+}
+
 
 .stat-label {
   font-size: 1.1rem;
   opacity: 0.95;
   font-weight: 500;
+  color: #1e40af;
+}
+
+/* Aurora Animation */
+@keyframes stat-aurora-move {
+  0% {
+    transform: translate(-60%, -60%) scale(1);
+  }
+  30% {
+    transform: translate(10%, -40%) scale(1.15);
+  }
+  60% {
+    transform: translate(20%, 20%) scale(1.05);
+  }
+  80% {
+    transform: translate(-40%, 10%) scale(1.2);
+  }
+  100% {
+    transform: translate(-60%, -60%) scale(1);
+  }
 }
 
 /* ==================== */

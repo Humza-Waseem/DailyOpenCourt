@@ -7,7 +7,9 @@ import {
   Upload, 
   BarChart3,
   Users,
-  Video  // ⭐ NEW ICON for Video Feedback
+  Video,  // ⭐ NEW ICON for Video Feedback
+  Film  // ✅ NEW: Import Film icon for Media
+
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
@@ -57,6 +59,12 @@ const Sidebar = () => {
       icon: BarChart3, 
       label: 'Analytics', 
       roles: ['ADMIN'] 
+    },
+    { 
+      path: '/media',
+      icon: Film, 
+      label: 'Media', 
+      roles: ['ADMIN', 'STAFF'] 
     },
   ];
 

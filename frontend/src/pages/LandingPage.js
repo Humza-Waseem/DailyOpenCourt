@@ -4,6 +4,11 @@ import { ChevronLeft, ChevronRight, Shield, Scale, Users, Award, TrendingUp, Pho
 import './LandingPage.css';
 // ⭐ Import images from assets folder
 import { sliderImages } from '../assets/slider-images';
+import CasesCounter from '../components/CasesCounter';
+import ImageSlider from '../components/ImageSlider';
+import CardCarousel from '../components/CardCarousel';
+
+
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -82,7 +87,7 @@ const LandingPage = () => {
           <div className="nav-content">
             <div className="logo-section">
               <img 
-                src="/punjab-police-logo.jpeg" 
+                src="/punjab-police-logo.png" 
                 alt="Punjab Police" 
                 className="nav-logo"
                 onError={(e) => e.target.style.display = 'none'}
@@ -98,81 +103,20 @@ const LandingPage = () => {
         {/* Hero Content */}
         <div className="hero-content">
           
-          {/* Full Width Image Slider - NOW AT TOP */}
-          <div className="slider-container-fullwidth">
-            {sliderImages.length === 0 ? (
-              <div className="slider-loading">
-                <Shield size={64} />
-                <p>No images loaded</p>
-                <p style={{fontSize: '0.8rem', marginTop: '1rem'}}>
-                  Check:  frontend/src/assets/slider-images/
-                </p>
-              </div>
-            ) : (
-              <div className="slider-wrapper">
-                {sliderImages.map((image, index) => (
-                  <div
-                    key={index}
-                    className={`slide ${index === currentSlide ? 'active' : ''}`}
-                  >
-                    <img 
-                      src={image} 
-                      alt={`Punjab Police Open Court ${index + 1}`}
-                      className="slide-image"
-                      onLoad={() => console.log(`✅ Image ${index + 1} loaded successfully`)}
-                      onError={(e) => {
-                        console.error(`❌ Failed to load image ${index + 1}`);
-                        e.target. style.display = 'none';
-                        e.target.parentElement.classList.add('slide-error');
-                      }}
-                    />
-                    
-                    {/* Fallback if image doesn't load */}
-                    <div className="slide-fallback">
-                      <Shield size={64} />
-                      <p>Punjab Police</p>
-                    </div>
-                  </div>
-                ))}
 
-                {/* Navigation Arrows */}
-                <button className="slider-btn prev" onClick={prevSlide} aria-label="Previous slide">
-                  <ChevronLeft size={24} />
-                </button>
-                <button className="slider-btn next" onClick={nextSlide} aria-label="Next slide">
-                  <ChevronRight size={24} />
-                </button>
-
-                {/* Dots Indicator */}
-                <div className="slider-dots">
-                  {sliderImages.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`dot ${index === currentSlide ? 'active' : ''}`}
-                      onClick={() => goToSlide(index)}
-                      aria-label={`Go to slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-
-                {/* Slide Counter - REMOVED */}
-              </div>
-            )}
-          </div>
-
-          {/* Hero Text - NOW BELOW SLIDER */}
-          <div className="hero-text">
+           {/* Hero Text - NOW BELOW SLIDER */}
+           <div className="hero-text">
             {/* Title with Logo Inline */}
             <div className="hero-title-section">
-              <img 
-                src="/punjab-police-logo.jpeg" 
+              {/* <img 
+                src="/punjab-police-logo.png" 
                 alt="Punjab Police" 
                 className="hero-title-logo"
                 onError={(e) => e.target.style.display = 'none'}
-              />
-              <h1 className="hero-title">Daily Open Court</h1>
+              /> */}
+              <h1 className="hero-title">Daily Open Court — DIG Operations, Faisal Kamran</h1>
             </div>
-            <p className="hero-subtitle">Punjab Police Management System</p>
+            {/* <p className="hero-subtitle">DIG Operations Faisal Kamran</p> */}
             <p className="hero-description">
               A comprehensive digital solution for managing open court hearings, 
               applications, and justice delivery across Punjab Police stations.
@@ -186,9 +130,79 @@ const LandingPage = () => {
               </button>
             </div>
           </div>
+         
 
-        </div>
+          {/* <div className="slider-container-fullwidth">
+            {sliderImages.length === 0 ? (
+              <div className="slider-loading">
+                <Shield size={64} />
+                <p>No images loaded</p>
+                <p style={{fontSize: '0.8rem', marginTop: '1rem'}}>
+                  Check:  frontend/src/assets/slider-images/
+                </p>
+              </div>
+            ) : (
+              <div className="slider-wrapper">  
+                {sliderImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`slide ${index === currentSlide ? 'active' : ''}`}
+                  >
+                    <img 
+                      src={image} 
+                      alt={`Punjab Police Open Court ${index + 1}`}
+                      className="slide-image"
+                      onLoad={() => console.log(`Image ${index + 1} loaded successfully`)}
+                      onError={(e) => {
+                        console.error(` Failed to load image ${index + 1}`);
+                        e.target. style.display = 'none';
+                        e.target.parentElement.classList.add('slide-error');
+                      }}
+                    />
+                    
+                    <div className="slide-fallback">
+                      <Shield size={64} />
+                      <p>Punjab Police</p>
+                    </div>
+                  </div>
+                ))}
+
+                <button className="slider-btn prev" onClick={prevSlide} aria-label="Previous slide">
+                  <ChevronLeft size={24} />
+                </button>
+                <button className="slider-btn next" onClick={nextSlide} aria-label="Next slide">
+                  <ChevronRight size={24} />
+                </button>
+
+                <div className="slider-dots">
+                  {sliderImages.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`dot ${index === currentSlide ? 'active' : ''}`}
+                      onClick={() => goToSlide(index)}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+
+              </div>
+            )}
+          </div> */}
+      {/* <section className="image-slider-section">
+        <ImageSlider />
+      </section> */}
+         
+       
+      <section >
+        <CardCarousel />
       </section>
+      
+      <section>   
+          <CasesCounter />
+
+         </section>
+        </div>
+      </section>  
 
       {/* Features Section */}
       <section className="features-section">
@@ -217,20 +231,20 @@ const LandingPage = () => {
         <div className="section-container">
           <div className="stats-grid">
             <div className="stat-item">
-              <h3 className="stat-number">1000+</h3>
-              <p className="stat-label">Applications Processed</p>
+              <h3 className="stat-number stat-cases">1000+</h3>
+              <p className="stat-label stat-cases-text">Applications Processed</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">50+</h3>
-              <p className="stat-label">Police Stations</p>
+            <div className="stat-item ">
+              <h3 className="stat-number stat-stations">50+</h3>
+              <p className="stat-label stat-stations-text">Police Stations</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">24/7</h3>
-              <p className="stat-label">System Availability</p>
+            <div className="stat-item ">
+              <h3 className="stat-number stat-availability">24/7</h3>
+              <p className="stat-label stat-availability-text" >System Availability</p>
             </div>
-            <div className="stat-item">
-              <h3 className="stat-number">100%</h3>
-              <p className="stat-label">Data Security</p>
+            <div className="stat-item ">
+              <h3 className="stat-number stat-security">100%</h3>
+              <p className="stat-label stat-security-text">Data Security</p>
             </div>
           </div>
         </div>
@@ -254,7 +268,7 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-section">
             <img 
-              src="/punjab-police-logo.jpeg" 
+              src="/punjab-police-logo.png" 
               alt="Punjab Police" 
               className="footer-logo"
               onError={(e) => e.target.style.display = 'none'}

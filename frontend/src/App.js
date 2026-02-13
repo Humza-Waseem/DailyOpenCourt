@@ -12,6 +12,8 @@ import DataTablePage from './pages/DataTablePage';
 import StaffManagement from './pages/StaffManagement';  // ⭐ NEW IMPORT
 import UploadExcel from './pages/UploadExcel';
 import Analytics from './pages/Analytics';
+import Media from './pages/Media';
+
 import './App.css';
 import VideoFeedback from './pages/VideoFeedback';
 
@@ -91,6 +93,13 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <Analytics />
+              </Layout>
+            </PrivateRoute>
+          } />
+            <Route path="/media" element={
+            <PrivateRoute>
+              <Layout>
+                <Media />
               </Layout>
             </PrivateRoute>
           } />
